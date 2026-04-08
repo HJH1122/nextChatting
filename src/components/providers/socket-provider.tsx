@@ -22,20 +22,26 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    // 환경변수가 없으면 로컬호스트 주소를 기본으로 사용합니다.
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-    
-    const socketInstance = new (ClientIO as any)(siteUrl, {
+    // 소켓 서버를 초기화하기 위해 API 엔드포인트를 먼저 호출합니다.
+    fetch("/api/socket/io").catch(console.error);
+
+    const socketInstance = ClientIO({
       path: "/api/socket/io",
       addTrailingSlash: false,
     });
 
     socketInstance.on("connect", () => {
+      console.log("Socket connected");
       setIsConnected(true);
     });
 
     socketInstance.on("disconnect", () => {
+      console.log("Socket disconnected");
       setIsConnected(false);
+    });
+
+    socketInstance.on("connect_error", (error) => {
+      console.error("Socket connection error:", error);
     });
 
     setSocket(socketInstance);

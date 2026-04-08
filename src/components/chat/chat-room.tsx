@@ -39,8 +39,7 @@ export const ChatRoom = () => {
     if (!socket) return;
 
     socket.on("receive-message", (message: Message) => {
-      // 본인이 보낸 메시지는 중복 방지를 위해 필터링하거나, 서버에서 broadcast 할 때 처리 방식에 맞춤
-      // 현재 서버(io.ts)는 받은 메시지를 전체에 emit하므로 중복 체크가 필요할 수 있음
+      console.log("[CLIENT] Received message from server:", message);
       setMessages((prev) => {
         const messageExists = prev.find((m) => m.id === message.id);
         if (messageExists) return prev;
@@ -55,7 +54,10 @@ export const ChatRoom = () => {
 
   const onSendMessage = useCallback(
     (content: string) => {
-      if (!socket || !isConnected) return;
+      if (!socket || !isConnected) {
+        console.warn("[CLIENT] Socket not connected. Cannot send message.");
+        return;
+      }
 
       const newMessage: Message = {
         id: crypto.randomUUID(),
@@ -65,9 +67,7 @@ export const ChatRoom = () => {
         timestamp: new Date().toISOString(),
       };
 
-      // 낙관적 업데이트 (선택 사항)
-      // setMessages((prev) => [...prev, newMessage]);
-
+      console.log("[CLIENT] Emitting 'send-message' event:", newMessage);
       socket.emit("send-message", newMessage);
     },
     [socket, isConnected, currentUserId, roomId]

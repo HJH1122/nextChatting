@@ -12,20 +12,33 @@ export const config = {
 
 const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
   if (!res.socket.server.io) {
+    console.log("[SOCKET_IO] Initializing new Socket.io server...");
     const path = "/api/socket/io";
     const httpServer: NetServer = res.socket.server as any;
     const io = new ServerIO(httpServer, {
       path: path,
       addTrailingSlash: false,
     });
-    res.socket.server.io = io;
-
+    
     io.on("connection", (socket) => {
-      console.log(`[SOCKET_IO] Client connected: ${socket.id}`);
+      console.log(`[SOCKET_IO] New client connected: ${socket.id}`);
 
       socket.on("send-message", async (message: Message) => {
+        console.log("[SOCKET_IO] Received message event:", message.content);
         try {
-          // 1. DB에 메시지 저장
+          // 데이터베이스 저장
+          await db.user.upsert({
+            where: { id: message.senderId },
+            update: {},
+            create: { id: message.senderId, name: "테스트 유저" },
+          });
+
+          await db.room.upsert({
+            where: { id: message.roomId },
+            update: {},
+            create: { id: message.roomId, name: "자유 게시판" },
+          });
+
           const savedMessage = await db.message.create({
             data: {
               content: message.content,
@@ -34,19 +47,10 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
               createdAt: new Date(message.timestamp),
             },
             include: {
-              user: {
-                select: {
-                  name: true,
-                  imageUrl: true,
-                }
-              }
+              user: { select: { name: true, imageUrl: true } }
             }
           });
 
-          console.log(`[SOCKET_IO] Message saved and broadcasting: ${savedMessage.content}`);
-
-          // 2. 저장된 메시지를 해당 방의 유저들에게 브로드캐스트
-          // (여기서는 단순하게 전체 emit 하지만, roomId가 있을 경우 io.to(message.roomId).emit 등을 활용)
           const broadcastMessage: Message = {
             id: savedMessage.id,
             content: savedMessage.content,
@@ -56,6 +60,7 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
             user: savedMessage.user,
           };
 
+          console.log("[SOCKET_IO] Broadcasting to all clients...");
           io.emit("receive-message", broadcastMessage);
         } catch (error) {
           console.error("[SOCKET_IO_ERROR]", error);
@@ -66,6 +71,11 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
         console.log("[SOCKET_IO] Client disconnected");
       });
     });
+
+    res.socket.server.io = io;
+  } else {
+    // 이미 서버가 존재하면 로그만 찍습니다.
+    // console.log("[SOCKET_IO] Socket.io server already running");
   }
 
   res.end();
