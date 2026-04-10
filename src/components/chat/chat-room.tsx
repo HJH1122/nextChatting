@@ -5,18 +5,24 @@ import { useSocket } from "@/components/providers/socket-provider";
 import { Message } from "@/types/socket";
 import { MessageList } from "./message-list";
 import { MessageInput } from "./message-input";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 export const ChatRoom = () => {
   const { socket, isConnected } = useSocket();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [username, setUsername] = useState("");
+  const [isJoined, setIsJoined] = useState(false);
   
-  // 실제 앱에서는 인증 시스템의 유저 ID를 사용합니다.
-  const currentUserId = "user-123";
-  const roomId = "general-room"; // 기본 방 ID
+  // 입력한 username을 ID로 사용합니다 (테스트용)
+  const currentUserId = username;
+  const roomId = "general-room";
 
   // 이전 메시지 내역 불러오기
   useEffect(() => {
+    if (!isJoined) return;
+
     const fetchMessages = async () => {
       try {
         setIsLoading(true);
@@ -33,10 +39,10 @@ export const ChatRoom = () => {
     };
 
     fetchMessages();
-  }, [roomId]);
+  }, [roomId, isJoined]);
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || !isJoined) return;
 
     socket.on("receive-message", (message: Message) => {
       console.log("[CLIENT] Received message from server:", message);
@@ -50,7 +56,7 @@ export const ChatRoom = () => {
     return () => {
       socket.off("receive-message");
     };
-  }, [socket]);
+  }, [socket, isJoined]);
 
   const onSendMessage = useCallback(
     (content: string) => {
@@ -73,10 +79,43 @@ export const ChatRoom = () => {
     [socket, isConnected, currentUserId, roomId]
   );
 
+  const handleJoin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (username.trim()) {
+      setIsJoined(true);
+    }
+  };
+
+  if (!isJoined) {
+    return (
+      <div className="flex flex-col h-[500px] items-center justify-center border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 shadow-sm p-6">
+        <div className="w-full max-w-sm space-y-4 text-center">
+          <h2 className="text-2xl font-bold">채팅방 입장</h2>
+          <p className="text-sm text-zinc-500">사용하실 닉네임을 입력해주세요.</p>
+          <form onSubmit={handleJoin} className="space-y-3">
+            <Input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="닉네임 입력..."
+              className="text-center"
+              autoFocus
+            />
+            <Button type="submit" className="w-full" disabled={!username.trim()}>
+              입장하기
+            </Button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 shadow-sm overflow-hidden">
       <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-        <h2 className="font-semibold">실시간 채팅</h2>
+        <div>
+          <h2 className="font-semibold text-sm">실시간 채팅</h2>
+          <p className="text-xs text-blue-600 font-medium">내 닉네임: {username}</p>
+        </div>
         <div className="flex items-center gap-2">
           <div
             className={`w-2 h-2 rounded-full ${

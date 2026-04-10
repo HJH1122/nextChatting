@@ -30,7 +30,10 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
           await db.user.upsert({
             where: { id: message.senderId },
             update: {},
-            create: { id: message.senderId, name: "테스트 유저" },
+            create: { 
+              id: message.senderId, 
+              name: message.senderId // ID(사용자가 입력한 닉네임)를 이름으로 사용
+            },
           });
 
           await db.room.upsert({
