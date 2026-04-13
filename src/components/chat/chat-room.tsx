@@ -12,6 +12,8 @@ export const ChatRoom = () => {
   const { socket, isConnected } = useSocket();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingNextPage, setIsFetchingNextPage] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [username, setUsername] = useState("");
   const [isJoined, setIsJoined] = useState(false);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
@@ -20,17 +22,18 @@ export const ChatRoom = () => {
   const currentUserId = username;
   const roomId = "general-room";
 
-  // 이전 메시지 내역 불러오기
+  // 이전 메시지 내역 불러오기 (초기 로드)
   useEffect(() => {
     if (!isJoined) return;
 
-    const fetchMessages = async () => {
+    const fetchInitialMessages = async () => {
       try {
         setIsLoading(true);
         const response = await fetch(`/api/messages?roomId=${roomId}`);
         if (response.ok) {
           const data = await response.json();
-          setMessages(data);
+          setMessages(data.items);
+          setNextCursor(data.nextCursor);
         }
       } catch (error) {
         console.error("Failed to fetch messages:", error);
@@ -39,8 +42,27 @@ export const ChatRoom = () => {
       }
     };
 
-    fetchMessages();
+    fetchInitialMessages();
   }, [roomId, isJoined]);
+
+  // 추가 메시지 불러오기 (무한 스크롤용)
+  const fetchNextPage = useCallback(async () => {
+    if (!nextCursor || isFetchingNextPage) return;
+
+    try {
+      setIsFetchingNextPage(true);
+      const response = await fetch(`/api/messages?roomId=${roomId}&cursor=${nextCursor}`);
+      if (response.ok) {
+        const data = await response.json();
+        setMessages((prev) => [...data.items, ...prev]); // 과거 메시지를 앞에 추가
+        setNextCursor(data.nextCursor);
+      }
+    } catch (error) {
+      console.error("Failed to fetch more messages:", error);
+    } finally {
+      setIsFetchingNextPage(false);
+    }
+  }, [roomId, nextCursor, isFetchingNextPage]);
 
   useEffect(() => {
     if (!socket || !isJoined) return;
@@ -54,7 +76,7 @@ export const ChatRoom = () => {
       });
     });
 
-    // 다른 사용자가 입력 중일 때
+    // ... (typing indicator 로직 생략하지 않고 유지)
     socket.on("user-typing", ({ roomId: incomingRoomId, username: typingUser }) => {
       if (incomingRoomId === roomId && typingUser !== username) {
         setTypingUsers((prev) => {
@@ -64,7 +86,6 @@ export const ChatRoom = () => {
       }
     });
 
-    // 다른 사용자가 입력을 멈췄을 때
     socket.on("user-stop-typing", ({ roomId: incomingRoomId, username: typingUser }) => {
       if (incomingRoomId === roomId) {
         setTypingUsers((prev) => prev.filter((u) => u !== typingUser));
@@ -77,6 +98,8 @@ export const ChatRoom = () => {
       socket.off("user-stop-typing");
     };
   }, [socket, isJoined, roomId, username]);
+
+  // ... (onSendMessage, onTyping, onStopTyping, handleJoin 로직 유지)
 
   const onSendMessage = useCallback(
     (content: string) => {
@@ -165,7 +188,12 @@ export const ChatRoom = () => {
           메시지를 불러오는 중...
         </div>
       ) : (
-        <MessageList messages={messages} currentUserId={currentUserId} />
+        <MessageList 
+          messages={messages} 
+          currentUserId={currentUserId} 
+          loadMore={fetchNextPage}
+          shouldLoadMore={!!nextCursor && !isFetchingNextPage}
+        />
       )}
       
       {/* 입력 중 표시 */}

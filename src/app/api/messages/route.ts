@@ -5,29 +5,65 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const roomId = searchParams.get("roomId");
+    const cursor = searchParams.get("cursor"); // 다음 페이지를 위한 커서
 
     if (!roomId) {
       return new NextResponse("Room ID missing", { status: 400 });
     }
 
-    // 최신 메시지 50개 로드
-    const messages = await db.message.findMany({
-      where: {
-        roomId,
-      },
-      include: {
-        user: {
-          select: {
-            name: true,
-            imageUrl: true,
+    const MESSAGES_BATCH = 15;
+
+    let messages = [];
+
+    if (cursor) {
+      // 커서가 있는 경우 (이전 메시지 추가 로드)
+      messages = await db.message.findMany({
+        take: MESSAGES_BATCH,
+        skip: 1,
+        cursor: {
+          id: cursor,
+        },
+        where: {
+          roomId,
+        },
+        include: {
+          user: {
+            select: {
+              name: true,
+              imageUrl: true,
+            },
           },
         },
-      },
-      orderBy: {
-        createdAt: "asc",
-      },
-      take: 50,
-    });
+        orderBy: {
+          createdAt: "desc", // 최신순으로 가져와야 '이전' 데이터를 찾기 쉬움
+        },
+      });
+    } else {
+      // 처음 로드할 때
+      messages = await db.message.findMany({
+        take: MESSAGES_BATCH,
+        where: {
+          roomId,
+        },
+        include: {
+          user: {
+            select: {
+              name: true,
+              imageUrl: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+    }
+
+    let nextCursor = null;
+
+    if (messages.length === MESSAGES_BATCH) {
+      nextCursor = messages[MESSAGES_BATCH - 1].id;
+    }
 
     const formattedMessages = messages.map((m) => ({
       id: m.id,
@@ -36,9 +72,12 @@ export async function GET(req: Request) {
       roomId: m.roomId,
       timestamp: m.createdAt.toISOString(),
       user: m.user,
-    }));
+    })).reverse(); // UI에서는 시간순(asc)으로 보여줘야 하므로 다시 뒤집음
 
-    return NextResponse.json(formattedMessages);
+    return NextResponse.json({
+      items: formattedMessages,
+      nextCursor,
+    });
   } catch (error) {
     console.error("[MESSAGES_GET_ERROR]", error);
     return new NextResponse("Internal Error", { status: 500 });
