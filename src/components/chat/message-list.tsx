@@ -20,7 +20,8 @@ export const MessageList = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const topRef = useRef<HTMLDivElement>(null);
-  const [prevMessageCount, setPrevMessageCount] = useState(messages.length);
+  const [prevMessageCount, setPrevMessageCount] = useState(0);
+  const hasInitialized = useRef(false);
 
   // 무한 스크롤 감지 (Intersection Observer)
   useEffect(() => {
@@ -40,29 +41,30 @@ export const MessageList = ({
     return () => observer.disconnect();
   }, [loadMore, shouldLoadMore]);
 
-  // 스크롤 제어 로직
+  // 초기 로딩 및 메시지 추가 시 스크롤 제어
   useEffect(() => {
-    const container = scrollRef.current;
-    if (!container) return;
+    if (messages.length === 0) return;
 
-    // 상황 1: 새로운 메시지가 하단에 추가됨 (실시간 채팅)
-    // 마지막 메시지가 내 메시지라면 아래로 스크롤
-    if (messages.length > 0 && messages[messages.length - 1].senderId === currentUserId) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    } 
-    // 상황 2: 과거 메시지가 상단에 추가됨 (무한 스크롤)
-    // 브라우저의 overflow-anchor가 기본적으로 처리해주지만, 
-    // 명시적으로 앵커를 설정하여 스크롤 튐을 방지합니다.
+    // 1. 초기 렌더링 시 하단으로 이동
+    if (!hasInitialized.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "auto" });
+      hasInitialized.current = true;
+      setPrevMessageCount(messages.length);
+      return;
+    }
+
+    // 2. 새로운 메시지가 하단에 추가됨 (실시간 채팅)
+    // 마지막 메시지가 내 메시지거나, 스크롤이 이미 하단 근처에 있다면 아래로 스크롤
+    const isNewMessageAtBottom = messages.length > prevMessageCount;
+    if (isNewMessageAtBottom) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.senderId === currentUserId) {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      }
+    }
 
     setPrevMessageCount(messages.length);
   }, [messages, currentUserId, prevMessageCount]);
-
-  // 초기 로딩 시 하단으로 이동
-  useEffect(() => {
-    if (messages.length > 0 && prevMessageCount === 0) {
-      bottomRef.current?.scrollIntoView({ behavior: "auto" });
-    }
-  }, [messages, prevMessageCount]);
 
   return (
     <div 
