@@ -30,9 +30,20 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
         onlineUsers.set(socket.id, username);
         console.log(`[SOCKET_IO] User joined: ${username} (${socket.id})`);
         
-        // 전체 클라이언트에게 현재 접속자 목록 전송
+        // 1. 전체 클라이언트에게 현재 접속자 목록 전송
         const userList = Array.from(new Set(onlineUsers.values()));
         io.emit("online-users", userList);
+
+        // 2. 입장 알림 시스템 메시지 발송
+        const joinMessage: Message = {
+          id: `system-${Date.now()}-${socket.id}`,
+          content: `${username}님이 입장하셨습니다.`,
+          senderId: "system",
+          roomId: "general", // 현재 고정된 방 ID 사용 중
+          timestamp: new Date().toISOString(),
+          type: "SYSTEM",
+        };
+        io.emit("receive-message", joinMessage);
       });
 
       socket.on("send-message", async (message: Message) => {
@@ -72,6 +83,7 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
             senderId: savedMessage.userId,
             roomId: savedMessage.roomId,
             timestamp: savedMessage.createdAt.toISOString(),
+            type: "USER", // 일반 사용자 메시지 타입 지정
             user: savedMessage.user,
           };
 
@@ -100,9 +112,20 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
           onlineUsers.delete(socket.id);
           console.log(`[SOCKET_IO] User left: ${username}`);
           
-          // 업데이트된 접속자 목록 전송
+          // 1. 업데이트된 접속자 목록 전송
           const userList = Array.from(new Set(onlineUsers.values()));
           io.emit("online-users", userList);
+
+          // 2. 퇴장 알림 시스템 메시지 발송
+          const leaveMessage: Message = {
+            id: `system-leave-${Date.now()}-${socket.id}`,
+            content: `${username}님이 퇴장하셨습니다.`,
+            senderId: "system",
+            roomId: "general",
+            timestamp: new Date().toISOString(),
+            type: "SYSTEM",
+          };
+          io.emit("receive-message", leaveMessage);
         }
       });
     });

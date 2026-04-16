@@ -8,6 +8,7 @@ export interface Message {
   senderId: string;
   roomId: string;
   timestamp: string;
+  type?: 'USER' | 'SYSTEM'; // 메시지 타입 추가
   user?: {
     name: string | null;
     imageUrl: string | null;

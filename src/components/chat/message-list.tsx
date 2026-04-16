@@ -86,8 +86,25 @@ export const MessageList = ({
 
       {messages.map((message, index) => {
         const isMyMessage = message.senderId === currentUserId;
+        const isSystemMessage = message.type === "SYSTEM";
         // 상단에 메시지가 추가될 때, 기존의 가장 첫 번째였던 메시지에 앵커를 걸어 스크롤 위치를 유지합니다.
         const isAnchor = index === messages.length - prevMessageCount;
+
+        if (isSystemMessage) {
+          return (
+            <div 
+              key={message.id} 
+              className="flex justify-center my-2"
+              style={isAnchor ? { overflowAnchor: "auto" } : { overflowAnchor: "none" }}
+            >
+              <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-full px-4 py-1">
+                <p className="text-[11px] text-zinc-500 font-medium">
+                  {message.content}
+                </p>
+              </div>
+            </div>
+          );
+        }
 
         return (
           <div
