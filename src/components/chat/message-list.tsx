@@ -123,6 +123,46 @@ export const MessageList = ({
               }`}
             >
               <p className="text-sm leading-relaxed">{message.content}</p>
+              
+              {/* 링크 프리뷰 카드 추가 */}
+              {message.preview && (
+                <a 
+                  href={message.preview.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className={`block mt-2 rounded-lg overflow-hidden border ${
+                    isMyMessage ? "bg-white/10 border-white/20" : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700"
+                  }`}
+                >
+                  {message.preview.image && (
+                    <div className="relative h-32 w-full">
+                      <img 
+                        src={message.preview.image} 
+                        alt={message.preview.title}
+                        className="object-cover w-full h-full"
+                      />
+                    </div>
+                  )}
+                  <div className="p-2 space-y-1">
+                    <h4 className={`text-xs font-bold line-clamp-1 ${isMyMessage ? "text-white" : "text-zinc-900 dark:text-zinc-100"}`}>
+                      {message.preview.title}
+                    </h4>
+                    <p className={`text-[10px] line-clamp-2 ${isMyMessage ? "text-blue-100" : "text-zinc-500"}`}>
+                      {message.preview.description}
+                    </p>
+                    <p className={`text-[9px] uppercase tracking-wider ${isMyMessage ? "text-blue-200" : "text-zinc-400"}`}>
+                      {(() => {
+                        try {
+                          return new URL(message.preview.url).hostname;
+                        } catch {
+                          return message.preview.url;
+                        }
+                      })()}
+                    </p>
+                  </div>
+                </a>
+              )}
+
               <p className={`text-[10px] mt-1 text-right ${isMyMessage ? "text-blue-100" : "text-zinc-500"}`}>
                 {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </p>

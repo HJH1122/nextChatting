@@ -13,6 +13,12 @@ export interface Message {
     name: string | null;
     imageUrl: string | null;
   };
+  preview?: {
+    title: string;
+    description: string;
+    image: string;
+    url: string;
+  };
 }
 
 export type NextApiResponseServerIo = NextApiResponse & {

@@ -27,8 +27,16 @@ model Room {
 }
 
 model Message {
-  id        String   @id @default(cuid())
-  content   String   @db.Text
+  id           String   @id @default(cuid())
+  content      String   @db.Text
+  
+  // 링크 프리뷰를 위한 필드 추가
+  linkPreview  String?  @db.Text // JSON 형태로 저장하거나 구분자를 사용
+  previewTitle String?
+  previewDesc  String?
+  previewImage String?
+  previewUrl   String?
+
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   roomId    String

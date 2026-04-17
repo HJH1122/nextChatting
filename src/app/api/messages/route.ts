@@ -72,6 +72,12 @@ export async function GET(req: Request) {
       roomId: m.roomId,
       timestamp: m.createdAt.toISOString(),
       user: m.user,
+      preview: m.previewTitle ? {
+        title: m.previewTitle,
+        description: m.previewDesc || "",
+        image: m.previewImage || "",
+        url: m.previewUrl || ""
+      } : undefined
     })).reverse(); // UI에서는 시간순(asc)으로 보여줘야 하므로 다시 뒤집음
 
     return NextResponse.json({

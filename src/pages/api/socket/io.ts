@@ -3,12 +3,16 @@ import { NextApiRequest } from "next";
 import { Server as ServerIO } from "socket.io";
 import { Message, NextApiResponseServerIo } from "@/types/socket";
 import { db } from "@/lib/db";
+import { getLinkPreview } from "link-preview-js";
 
 export const config = {
   api: {
     bodyParser: false,
   },
 };
+
+// URL 정규식 (http/https 또는 www. 로 시작하는 링크 감지)
+const URL_REGEX = /((https?:\/\/[^\s]+)|(www\.[^\s]+))/g;
 
 const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
   if (!res.socket.server.io) {
@@ -65,12 +69,50 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
             create: { id: message.roomId, name: "자유 게시판" },
           });
 
+          // 링크 프리뷰 추출 시도
+          const urls = message.content.match(URL_REGEX);
+          let previewData = null;
+
+          if (urls && urls.length > 0) {
+            let targetUrl = urls[0];
+            
+            // 프로토콜이 없는 경우 (예: www.google.com) http:// 를 붙여줌
+            if (!targetUrl.startsWith("http")) {
+              targetUrl = `http://${targetUrl}`;
+            }
+
+            try {
+              const data: any = await getLinkPreview(targetUrl, {
+                timeout: 3000,
+                followRedirects: `follow`,
+                headers: {
+                  "user-agent": "googlebot", // 일부 사이트 차단 방지
+                }
+              });
+              
+              if (data && data.title) {
+                previewData = {
+                  title: data.title,
+                  description: data.description || "",
+                  image: data.images ? data.images[0] : (data.favicons ? data.favicons[0] : ""),
+                  url: data.url
+                };
+              }
+            } catch (err) {
+              console.error("[LINK_PREVIEW_ERROR]", err);
+            }
+          }
+
           const savedMessage = await db.message.create({
             data: {
               content: message.content,
               userId: message.senderId,
               roomId: message.roomId,
               createdAt: new Date(message.timestamp),
+              previewTitle: previewData?.title,
+              previewDesc: previewData?.description,
+              previewImage: previewData?.image,
+              previewUrl: previewData?.url,
             },
             include: {
               user: { select: { name: true, imageUrl: true } }
@@ -85,6 +127,13 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
             timestamp: savedMessage.createdAt.toISOString(),
             type: "USER", // 일반 사용자 메시지 타입 지정
             user: savedMessage.user,
+            // 클라이언트로 보낼 프리뷰 데이터 포함
+            preview: previewData ? {
+              title: savedMessage.previewTitle!,
+              description: savedMessage.previewDesc!,
+              image: savedMessage.previewImage!,
+              url: savedMessage.previewUrl!
+            } : undefined
           };
 
           console.log("[SOCKET_IO] Broadcasting to all clients...");
