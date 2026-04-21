@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useSocket } from "@/components/providers/socket-provider";
-import { Message } from "@/types/socket";
+import { Message, Attachment } from "@/types/socket";
 import { MessageList } from "./message-list";
 import { MessageInput } from "./message-input";
 import { Input } from "@/components/ui/input";

@@ -25,39 +25,26 @@ export const MessageInput = ({
   
   // 파일 업로드 관련 상태
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setContent(e.target.value);
-
-    // 타이핑 시작 이벤트 처리
-    if (!isTyping && e.target.value.trim().length > 0) {
-      setIsTyping(true);
-      onTyping();
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!disabled && !isUploading) {
+      setIsDragging(true);
     }
-
-    // 기존 타이머 취소
-    if (typingTimeout) clearTimeout(typingTimeout);
-
-    // 2초 후 타이핑 중단 처리
-    const timeout = setTimeout(() => {
-      if (isTyping) {
-        setIsTyping(false);
-        onStopTyping();
-      }
-    }, 2000);
-
-    setTypingTimeout(timeout);
   };
 
-  const handleFileClick = () => {
-    fileInputRef.current?.click();
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  const uploadFiles = async (files: FileList | File[]) => {
+    if (files.length === 0) return;
 
     const file = files[0];
     
@@ -103,6 +90,53 @@ export const MessageInput = ({
     }
   };
 
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (disabled || isUploading) return;
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      await uploadFiles(files);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setContent(e.target.value);
+
+    // 타이핑 시작 이벤트 처리
+    if (!isTyping && e.target.value.trim().length > 0) {
+      setIsTyping(true);
+      onTyping();
+    }
+
+    // 기존 타이머 취소
+    if (typingTimeout) clearTimeout(typingTimeout);
+
+    // 2초 후 타이핑 중단 처리
+    const timeout = setTimeout(() => {
+      if (isTyping) {
+        setIsTyping(false);
+        onStopTyping();
+      }
+    }, 2000);
+
+    setTypingTimeout(timeout);
+  };
+
+  const handleFileClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      await uploadFiles(files);
+    }
+  };
+
   const removeAttachment = (id: string) => {
     setAttachments((prev) => prev.filter((a) => a.id !== id));
   };
@@ -129,7 +163,24 @@ export const MessageInput = ({
   }, [typingTimeout]);
 
   return (
-    <div className="flex flex-col border-t border-zinc-200 dark:border-zinc-800">
+    <div 
+      className={`flex flex-col border-t border-zinc-200 dark:border-zinc-800 transition-colors relative ${
+        isDragging ? "bg-blue-50/50 dark:bg-blue-900/20" : ""
+      }`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* 드래그 앤 드롭 오버레이 */}
+      {isDragging && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-blue-500/10 border-2 border-dashed border-blue-500 rounded-t-lg pointer-events-none">
+          <div className="flex flex-col items-center gap-2 text-blue-600 dark:text-blue-400">
+            <Paperclip className="w-8 h-8 animate-bounce" />
+            <p className="text-sm font-semibold">파일을 여기에 놓으세요</p>
+          </div>
+        </div>
+      )}
+
       {/* 업로드된 파일 미리보기 목록 */}
       {attachments.length > 0 && (
         <div className="flex flex-wrap gap-2 p-3 bg-zinc-50 dark:bg-zinc-900/50">
