@@ -121,10 +121,29 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
                   fileSize: attachment.fileSize,
                 })),
               } : undefined,
+              poll: message.poll ? {
+                create: {
+                  question: message.poll.question,
+                  options: {
+                    create: message.poll.options.map((opt) => ({
+                      text: opt.text,
+                    })),
+                  },
+                },
+              } : undefined,
             },
             include: {
               user: { select: { name: true, imageUrl: true } },
               attachments: true,
+              poll: {
+                include: {
+                  options: {
+                    include: {
+                      votes: { select: { userId: true } },
+                    },
+                  },
+                },
+              },
             }
           });
 
@@ -137,6 +156,16 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
             type: "USER", // 일반 사용자 메시지 타입 지정
             user: savedMessage.user,
             attachments: savedMessage.attachments,
+            poll: savedMessage.poll ? {
+              id: savedMessage.poll.id,
+              question: savedMessage.poll.question,
+              closedAt: savedMessage.poll.closedAt?.toISOString() || null,
+              options: savedMessage.poll.options.map((opt) => ({
+                id: opt.id,
+                text: opt.text,
+                votes: opt.votes,
+              })),
+            } : undefined,
             // 클라이언트로 보낼 프리뷰 데이터 포함
             preview: previewData ? {
               title: savedMessage.previewTitle!,
@@ -150,6 +179,59 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
           io.emit("receive-message", broadcastMessage);
         } catch (error) {
           console.error("[SOCKET_IO_ERROR]", error);
+        }
+      });
+
+      // 투표 이벤트 처리
+      socket.on("vote", async ({ pollId, optionId, userId }) => {
+        try {
+          const existingVote = await db.vote.findUnique({
+            where: {
+              userId_pollId: {
+                userId,
+                pollId,
+              },
+            },
+          });
+
+          if (existingVote) {
+            await db.vote.update({
+              where: { id: existingVote.id },
+              data: { optionId },
+            });
+          } else {
+            await db.vote.create({
+              data: {
+                userId,
+                pollId,
+                optionId,
+              },
+            });
+          }
+
+          const updatedPoll = await db.poll.findUnique({
+            where: { id: pollId },
+            include: {
+              options: {
+                include: {
+                  votes: { select: { userId: true } },
+                },
+              },
+            },
+          });
+
+          if (updatedPoll) {
+            io.emit("poll-update", {
+              pollId: updatedPoll.id,
+              options: updatedPoll.options.map((opt) => ({
+                id: opt.id,
+                text: opt.text,
+                votes: opt.votes,
+              })),
+            });
+          }
+        } catch (error) {
+          console.error("[SOCKET_IO_VOTE_ERROR]", error);
         }
       });
 

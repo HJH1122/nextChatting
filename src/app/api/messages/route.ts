@@ -27,6 +27,19 @@ export async function GET(req: NextRequest) {
           },
         },
         attachments: true,
+        poll: {
+          include: {
+            options: {
+              include: {
+                votes: {
+                  select: {
+                    userId: true
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       orderBy: {
         createdAt: "desc" as const, // 최신순으로 가져와야 '이전' 데이터를 찾기 쉬움
@@ -58,6 +71,16 @@ export async function GET(req: NextRequest) {
       timestamp: m.createdAt.toISOString(),
       user: m.user,
       attachments: m.attachments,
+      poll: m.poll ? {
+        id: m.poll.id,
+        question: m.poll.question,
+        closedAt: m.poll.closedAt?.toISOString() || null,
+        options: m.poll.options.map(opt => ({
+          id: opt.id,
+          text: opt.text,
+          votes: opt.votes
+        }))
+      } : undefined,
       preview: m.previewTitle ? {
         title: m.previewTitle,
         description: m.previewDesc || "",

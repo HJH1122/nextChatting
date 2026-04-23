@@ -3,11 +3,12 @@
 import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Paperclip, Loader2, X, Image as ImageIcon } from "lucide-react";
+import { Paperclip, Loader2, X, Image as ImageIcon, BarChart3 } from "lucide-react";
 import { Attachment } from "@/types/socket";
+import { PollForm } from "./poll-form";
 
 interface MessageInputProps {
-  onSendMessage: (content: string, attachments?: Attachment[]) => void;
+  onSendMessage: (content: string, attachments?: Attachment[], poll?: any) => void;
   onTyping: () => void;
   onStopTyping: () => void;
   disabled?: boolean;
@@ -32,6 +33,7 @@ export const MessageInput = ({
   const [content, setContent] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [showPollForm, setShowPollForm] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setContent(e.target.value);
@@ -85,6 +87,14 @@ export const MessageInput = ({
     setAttachments([]);
   };
 
+  const handlePollSubmit = (question: string, options: string[]) => {
+    onSendMessage(`[Poll] ${question}`, undefined, {
+      question,
+      options: options.map(opt => ({ text: opt }))
+    });
+    setShowPollForm(false);
+  };
+
   // 컴포넌트 언마운트 시 타이머 정리
   useEffect(() => {
     return () => {
@@ -96,6 +106,16 @@ export const MessageInput = ({
     <div 
       className="flex flex-col border-t border-zinc-200 dark:border-zinc-800 transition-colors relative"
     >
+      {/* 설문조사 작성 폼 팝업 */}
+      {showPollForm && (
+        <div className="absolute bottom-full left-4 mb-2 z-50 animate-in slide-in-from-bottom-2 duration-200">
+          <PollForm 
+            onClose={() => setShowPollForm(false)} 
+            onSubmit={handlePollSubmit}
+          />
+        </div>
+      )}
+
       {/* 업로드된 파일 미리보기 목록 */}
       {attachments.length > 0 && (
         <div className="flex flex-wrap gap-2 p-3 bg-zinc-50 dark:bg-zinc-900/50">
@@ -124,7 +144,7 @@ export const MessageInput = ({
 
       <form
         onSubmit={handleSubmit}
-        className="p-4 flex gap-2 items-center"
+        className="p-4 flex gap-1 items-center"
       >
         <input 
           type="file"
@@ -132,28 +152,40 @@ export const MessageInput = ({
           onChange={handleFileChange}
           className="hidden"
         />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={handleFileClick}
-          disabled={disabled || isUploading}
-          className="text-zinc-500"
-        >
-          {isUploading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <Paperclip className="w-5 h-5" />
-          )}
-        </Button>
+        <div className="flex items-center gap-0.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={handleFileClick}
+            disabled={disabled || isUploading}
+            className="text-zinc-500 h-9 w-9"
+          >
+            {isUploading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Paperclip className="w-5 h-5" />
+            )}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowPollForm(!showPollForm)}
+            disabled={disabled || isUploading}
+            className={`h-9 w-9 ${showPollForm ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20" : "text-zinc-500"}`}
+          >
+            <BarChart3 className="w-5 h-5" />
+          </Button>
+        </div>
         <Input
           value={content}
           onChange={handleInputChange}
           placeholder={isUploading ? "파일 업로드 중..." : "메시지를 입력하세요..."}
           disabled={disabled || isUploading}
-          className="flex-1"
+          className="flex-1 ml-1"
         />
-        <Button type="submit" disabled={disabled || (!content.trim() && attachments.length === 0) || isUploading}>
+        <Button type="submit" disabled={disabled || (!content.trim() && attachments.length === 0) || isUploading} className="ml-1">
           전송
         </Button>
       </form>

@@ -155,6 +155,24 @@ export const ChatRoom = () => {
       setOnlineUsers(users);
     });
 
+    // 실시간 설문 투표 결과 업데이트 수신
+    socket.on("poll-update", ({ pollId, options }: { pollId: string; options: any[] }) => {
+      setMessages((prev) => 
+        prev.map((msg) => {
+          if (msg.poll && msg.poll.id === pollId) {
+            return {
+              ...msg,
+              poll: {
+                ...msg.poll,
+                options,
+              }
+            };
+          }
+          return msg;
+        })
+      );
+    });
+
     // 방에 입장했음을 알림
     socket.emit("join", username);
 
@@ -163,13 +181,12 @@ export const ChatRoom = () => {
       socket.off("user-typing");
       socket.off("user-stop-typing");
       socket.off("online-users");
+      socket.off("poll-update");
     };
-  }, [socket, isJoined, roomId, username]);
+    }, [socket, isJoined, roomId, username]);
 
-  // ... (onSendMessage, onTyping, onStopTyping, handleJoin 로직 유지)
-
-  const onSendMessage = useCallback(
-    (content: string, attachments?: Attachment[]) => {
+    const onSendMessage = useCallback(
+    (content: string, attachments?: Attachment[], poll?: any) => {
       if (!socket || !isConnected) {
         console.warn("[CLIENT] Socket not connected. Cannot send message.");
         return;
@@ -182,6 +199,7 @@ export const ChatRoom = () => {
         roomId: roomId,
         timestamp: new Date().toISOString(),
         attachments,
+        poll,
       };
 
       console.log("[CLIENT] Emitting 'send-message' event:", newMessage);

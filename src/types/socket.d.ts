@@ -10,6 +10,21 @@ export interface Attachment {
   fileSize: number | null;
 }
 
+export interface PollOption {
+  id: string;
+  text: string;
+  votes: {
+    userId: string;
+  }[];
+}
+
+export interface Poll {
+  id: string;
+  question: string;
+  options: PollOption[];
+  closedAt: string | null;
+}
+
 export interface Message {
   id: string;
   content: string;
@@ -28,6 +43,7 @@ export interface Message {
     url: string;
   };
   attachments?: Attachment[];
+  poll?: Poll;
 }
 
 export type NextApiResponseServerIo = NextApiResponse & {

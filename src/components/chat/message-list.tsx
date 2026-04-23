@@ -3,6 +3,7 @@
 import { Message } from "@/types/socket";
 import { useEffect, useRef, useState } from "react";
 import { Loader2, FileIcon, Download, Image as ImageIcon, Paperclip } from "lucide-react";
+import { PollDisplay } from "./poll-display";
 
 interface MessageListProps {
   messages: Message[];
@@ -172,6 +173,15 @@ export const MessageList = ({
             >
               {message.content && <p className="text-sm leading-relaxed">{message.content}</p>}
               
+              {/* 설문조사 렌더링 */}
+              {message.poll && (
+                <PollDisplay 
+                  poll={message.poll} 
+                  currentUserId={currentUserId} 
+                  isMyMessage={isMyMessage} 
+                />
+              )}
+
               {/* 첨부 파일 렌더링 */}
               {message.attachments && message.attachments.length > 0 && (
                 <div className={`mt-2 space-y-2 ${message.content ? "pt-2 border-t border-white/10" : ""}`}>

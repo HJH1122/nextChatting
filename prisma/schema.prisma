@@ -14,6 +14,7 @@ model User {
   name      String?
   imageUrl  String?   @db.Text
   messages  Message[]
+  votes     Vote[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
@@ -40,6 +41,9 @@ model Message {
   // 파일 공유를 위한 관계 추가
   attachments  Attachment[]
 
+  // 설문조사 기능 추가
+  poll         Poll?
+
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   roomId    String
@@ -49,6 +53,41 @@ model Message {
 
   @@index([userId])
   @@index([roomId])
+}
+
+model Poll {
+  id        String       @id @default(cuid())
+  question  String
+  closedAt  DateTime?
+  options   PollOption[]
+  votes     Vote[]
+  
+  messageId String       @unique
+  message   Message      @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+model PollOption {
+  id      String @id @default(cuid())
+  text    String
+  pollId  String
+  poll    Poll   @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes   Vote[]
+}
+
+model Vote {
+  id       String     @id @default(cuid())
+  userId   String
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pollId   String
+  poll     Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  optionId String
+  option   PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@unique([userId, pollId])
 }
 
 model Attachment {
