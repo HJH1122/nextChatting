@@ -136,6 +136,7 @@ export const MessageList = ({
       {messages.map((message, index) => {
         const isMyMessage = message.senderId === currentUserId;
         const isSystemMessage = message.type === "SYSTEM";
+        const isBotMessage = message.type === "BOT";
         // 상단에 메시지가 추가될 때, 기존의 가장 첫 번째였던 메시지에 앵커를 걸어 스크롤 위치를 유지합니다.
         const isAnchor = index === messages.length - prevMessageCount;
 
@@ -161,13 +162,22 @@ export const MessageList = ({
             className={`flex flex-col ${isMyMessage ? "items-end" : "items-start"}`}
             style={isAnchor ? { overflowAnchor: "auto" } : { overflowAnchor: "none" }}
           >
-            <span className="text-xs text-zinc-500 mb-1 px-1">
-              {isMyMessage ? "나" : (message.user?.name || message.senderId)}
-            </span>
+            <div className="flex items-center gap-1 mb-1 px-1">
+              <span className="text-xs text-zinc-500">
+                {isMyMessage ? "나" : (message.user?.name || message.senderId)}
+              </span>
+              {isBotMessage && (
+                <span className="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                  Bot
+                </span>
+              )}
+            </div>
             <div
               className={`max-w-[70%] rounded-2xl px-4 py-2 ${
                 isMyMessage
                   ? "bg-blue-600 text-white rounded-tr-none"
+                  : isBotMessage
+                  ? "bg-purple-50 text-purple-900 dark:bg-purple-900/20 dark:text-purple-100 border border-purple-100 dark:border-purple-800 rounded-tl-none"
                   : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 rounded-tl-none"
               }`}
             >

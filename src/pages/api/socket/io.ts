@@ -177,6 +177,51 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
 
           console.log("[SOCKET_IO] Broadcasting to all clients...");
           io.emit("receive-message", broadcastMessage);
+
+          // 챗봇 자동 응답 로직 ("/도움말" 명령어 처리)
+          if (message.content.trim() === "/도움말") {
+            setTimeout(async () => {
+              try {
+                const botId = "bot-helper";
+                const botName = "도움말 봇";
+                
+                // 봇 사용자 생성/확인
+                await db.user.upsert({
+                  where: { id: botId },
+                  update: { name: botName },
+                  create: { id: botId, name: botName },
+                });
+
+                const botContent = "안녕하세요! 무엇을 도와드릴까요?\n현재 지원하는 명령어:\n/도움말 - 도움말 보기\n/투표 - 투표 관련 안내";
+
+                const savedBotMessage = await db.message.create({
+                  data: {
+                    content: botContent,
+                    userId: botId,
+                    roomId: message.roomId,
+                    createdAt: new Date(),
+                  },
+                  include: {
+                    user: { select: { name: true, imageUrl: true } },
+                  }
+                });
+
+                const botBroadcastMessage: Message = {
+                  id: savedBotMessage.id,
+                  content: savedBotMessage.content,
+                  senderId: savedBotMessage.userId,
+                  roomId: savedBotMessage.roomId,
+                  timestamp: savedBotMessage.createdAt.toISOString(),
+                  type: "BOT",
+                  user: savedBotMessage.user,
+                };
+
+                io.emit("receive-message", botBroadcastMessage);
+              } catch (botError) {
+                console.error("[SOCKET_IO_BOT_ERROR]", botError);
+              }
+            }, 500); // 0.5초 지연 후 응답
+          }
         } catch (error) {
           console.error("[SOCKET_IO_ERROR]", error);
         }

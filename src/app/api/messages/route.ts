@@ -69,6 +69,7 @@ export async function GET(req: NextRequest) {
       senderId: m.userId,
       roomId: m.roomId,
       timestamp: m.createdAt.toISOString(),
+      type: m.userId === "bot-helper" ? "BOT" : "USER",
       user: m.user,
       attachments: m.attachments,
       poll: m.poll ? {
