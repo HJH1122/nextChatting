@@ -7,7 +7,8 @@ import { MessageList } from "./message-list";
 import { MessageInput } from "./message-input";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Users } from "lucide-react";
+import { Users, Search } from "lucide-react";
+import { ChatSearch } from "./chat-search";
 
 export const ChatRoom = () => {
   const { socket, isConnected } = useSocket();
@@ -20,6 +21,7 @@ export const ChatRoom = () => {
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [showOnlineUsers, setShowOnlineUsers] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   
   // 파일 업로드 관련 상태 (MessageInput에서 끌어올림)
   const [isUploading, setIsUploading] = useState(false);
@@ -268,17 +270,35 @@ export const ChatRoom = () => {
             접속 중인 사람 보기 ({onlineUsers.length})
           </Button>
         </div>
-        <div className="flex items-center gap-2">
-          <div
-            className={`w-2 h-2 rounded-full ${
-              isConnected ? "bg-green-500" : "bg-red-500"
-            }`}
-          />
-          <span className="text-xs text-zinc-500">
-            {isConnected ? "연결됨" : "연결 중..."}
-          </span>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowSearch(!showSearch)}
+            className={`h-8 w-8 ${showSearch ? "text-blue-600 bg-blue-50" : "text-zinc-500"}`}
+          >
+            <Search className="w-5 h-5" />
+          </Button>
+          <div className="flex items-center gap-2">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                isConnected ? "bg-green-500" : "bg-red-500"
+              }`}
+            />
+            <span className="text-xs text-zinc-500">
+              {isConnected ? "연결됨" : "연결 중..."}
+            </span>
+          </div>
         </div>
       </div>
+      
+      {/* 검색 사이드바 */}
+      {showSearch && (
+        <ChatSearch 
+          roomId={roomId} 
+          onClose={() => setShowSearch(false)} 
+        />
+      )}
       
       {/* 접속 중인 사용자 목록 오버레이 */}
       {showOnlineUsers && (
