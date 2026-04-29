@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, List, MessageCircle, Loader2 } from "lucide-react";
+import { Plus, List, MessageCircle, Loader2, User } from "lucide-react";
 
 interface Room {
   id: string;
   name: string;
   createdAt: string;
+  participantCount: number;
 }
 
 interface ChatLobbyProps {
@@ -157,7 +158,12 @@ export const ChatLobby = ({ onJoinRoom }: ChatLobbyProps) => {
                     </div>
                     <div>
                       <p className="font-medium">{room.name}</p>
-                      <p className="text-xs text-zinc-500">{new Date(room.createdAt).toLocaleDateString()} 생성</p>
+                      <div className="flex items-center text-xs text-zinc-500 gap-2">
+                        <p>{new Date(room.createdAt).toLocaleDateString()} 생성</p>
+                        <span className="flex items-center gap-1">
+                          <User className="w-3 h-3" /> {room.participantCount}
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
