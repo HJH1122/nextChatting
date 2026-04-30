@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { io } from "@/lib/socket"; // Import the globally exported io instance
+import { getSafeIo } from "@/lib/socket";
 
 export async function GET() {
   try {
+    const io = getSafeIo();
+    
     // Check if the Socket.IO server is initialized
     if (!io) {
       console.warn("[ROOMS_GET] Socket.IO server not initialized. Cannot retrieve participant counts.");
-      // If io is not initialized, return rooms without participant counts (or an error)
       const rooms = await db.room.findMany({
         orderBy: {
           createdAt: "desc",
@@ -24,6 +25,7 @@ export async function GET() {
 
     // Augment rooms with participant counts if io is available
     const roomsWithParticipants = rooms.map(room => {
+      // Get the number of users in the room from the socket adapter
       const participantCount = io.sockets.adapter.rooms.get(room.id)?.size || 0;
       return {
         ...room,

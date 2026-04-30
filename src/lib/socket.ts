@@ -1,10 +1,9 @@
 import { Server as NetServer } from "http";
 import { Server as ServerIO } from "socket.io";
 import { NextApiResponse } from "next";
-import { Server as NextServerSocketIO } from "@/types/socket";
 
 // Extend NextApiResponse to include the socket.io server
-type NextApiResponseServerIo = NextApiResponse & {
+export type NextApiResponseServerIo = NextApiResponse & {
   socket: {
     server: NetServer & {
       io?: ServerIO | undefined;
@@ -12,36 +11,44 @@ type NextApiResponseServerIo = NextApiResponse & {
   };
 };
 
-export let io: ServerIO | undefined; // Make io a direct export
+// Use a global variable to ensure the Socket.IO instance is shared across the entire process
+// This is necessary because Next.js might reload modules or have different entry points
+// for App Router and Pages Router.
+declare global {
+  var io: ServerIO | undefined;
+}
 
 export const getIo = (httpServer?: NetServer, res?: NextApiResponseServerIo): ServerIO => {
-  if (!io) {
-    if (!httpServer || !res) {
-      // If io is not initialized and no httpServer/res is provided,
-      // it means this is a call from a context that cannot initialize it.
-      // This might happen if /api/socket/io hasn't been hit yet.
-      // We should not throw an error here, but rather return undefined and handle it downstream.
-      // Or, better, ensure getIo is *always* called with httpServer/res from the socket API route.
-      // For now, let's assume it should be initialized.
-      // It's crucial that the /api/socket/io route is accessed first to initialize this.
-      throw new Error("Socket.IO server not initialized and no HTTP server/response provided. Please ensure /api/socket/io route is accessed to initialize the server.");
+  // Try to retrieve io from res.socket.server first if it's available
+  if (res?.socket?.server?.io) {
+    global.io = res.socket.server.io;
+  }
+
+  if (!global.io) {
+    if (!httpServer) {
+      // In some contexts, we might not have the httpServer yet.
+      // But we need to return something or handle the undefined case.
+      console.warn("[SOCKET_LIB] getIo called without httpServer and global.io is undefined.");
+      throw new Error("Socket.IO server not initialized. Please ensure /api/socket/io is called first.");
     }
 
-    const path = "/api/socket/io"; // This path should match your pages/api/socket/io.ts file
-    io = new ServerIO(httpServer, {
+    const path = "/api/socket/io"; 
+    global.io = new ServerIO(httpServer, {
       path: path,
-      addTrailingSlash: false, // Ensure consistent path handling
+      addTrailingSlash: false,
     });
+    
     // Attach io to the response socket server for subsequent checks
     if (res && res.socket && res.socket.server) {
-      res.socket.server.io = io;
+      res.socket.server.io = global.io;
     }
     console.log("[SOCKET_LIB] Initializing new Socket.io server...");
   }
-  return io;
+  
+  return global.io;
 };
 
-// You can also export other utility functions here if needed,
-// for example, to get room participant counts.
-// However, direct access to io.sockets.adapter.rooms is preferred
-// as it's the official way to get room info.
+// Helper function to safely get the io instance without initializing it
+export const getSafeIo = (): ServerIO | undefined => {
+  return global.io;
+};

@@ -3,7 +3,7 @@ import { NextApiRequest } from "next";
 import { Message } from "@/types/socket";
 import { db } from "@/lib/db";
 import { getLinkPreview } from "link-preview-js";
-import { getIo, NextApiResponseServerIo } from "@/lib/socket"; // Import getIo and NextApiResponseServerIo
+import { getIo, NextApiResponseServerIo } from "@/lib/socket";
 
 export const config = {
   api: {
@@ -14,14 +14,20 @@ export const config = {
 // URL 정규식 (http/https 또는 www. 로 시작하는 링크 감지)
 const URL_REGEX = /((https?:\/\/[^\s]+)|(www\.[^\s]+))/g;
 
+// 접속 중인 사용자 정보를 저장할 구조 (roomId -> Set of usernames)
+// 전역적으로 관리하여 핸들러 재호출 시에도 유지되도록 함
+const roomUsers = new Map<string, Set<string>>();
+// 소켓별 닉네임과 방 정보를 저장 (socket.id -> { username, roomId })
+const socketInfo = new Map<string, { username: string; roomId: string }>();
+
 const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
+  if (res.socket.server.io) {
+    res.end();
+    return;
+  }
+
   const io = getIo(res.socket.server as NetServer, res);
     
-  // 접속 중인 사용자 정보를 저장할 구조 (roomId -> Set of usernames)
-  const roomUsers = new Map<string, Set<string>>();
-  // 소켓별 닉네임과 방 정보를 저장 (socket.id -> { username, roomId })
-  const socketInfo = new Map<string, { username: string; roomId: string }>();
-
   io.on("connection", (socket) => {
     console.log(`[SOCKET_IO] New client connected: ${socket.id}`);
 
