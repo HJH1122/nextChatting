@@ -203,6 +203,7 @@ export const ChatRoom = ({ username, roomId, roomName, onLeave }: ChatRoomProps)
     socket.emit("join-room", { username, roomId });
 
     return () => {
+      socket.emit("leave-room");
       socket.off("receive-message");
       socket.off("user-typing");
       socket.off("user-stop-typing");

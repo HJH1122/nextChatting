@@ -15,10 +15,21 @@ export const config = {
 const URL_REGEX = /((https?:\/\/[^\s]+)|(www\.[^\s]+))/g;
 
 // 접속 중인 사용자 정보를 저장할 구조 (roomId -> Set of usernames)
-// 전역적으로 관리하여 핸들러 재호출 시에도 유지되도록 함
-const roomUsers = new Map<string, Set<string>>();
-// 소켓별 닉네임과 방 정보를 저장 (socket.id -> { username, roomId })
-const socketInfo = new Map<string, { username: string; roomId: string }>();
+// Next.js HMR 상황에서도 상태를 유지하기 위해 전역 객체 사용
+const globalForSocket = global as unknown as {
+  roomUsers: Map<string, Set<string>>;
+  socketInfo: Map<string, { username: string; roomId: string }>;
+};
+
+if (!globalForSocket.roomUsers) {
+  globalForSocket.roomUsers = new Map();
+}
+if (!globalForSocket.socketInfo) {
+  globalForSocket.socketInfo = new Map();
+}
+
+const roomUsers = globalForSocket.roomUsers;
+const socketInfo = globalForSocket.socketInfo;
 
 const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
   if (res.socket.server.io) {
@@ -27,12 +38,52 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
   }
 
   const io = getIo(res.socket.server as NetServer, res);
+
+  // 사용자 제거 로직 공통화
+  const handleUserLeave = (socketId: string) => {
+    const info = socketInfo.get(socketId);
+    if (info) {
+      const { username, roomId } = info;
+      socketInfo.delete(socketId);
+      
+      // 해당 방에 동일한 닉네임을 사용하는 다른 소켓이 남아있는지 확인
+      const otherSocketsInRoom = Array.from(socketInfo.values()).some(
+        (s) => s.username === username && s.roomId === roomId
+      );
+
+      if (roomUsers.has(roomId)) {
+        const users = roomUsers.get(roomId)!;
+        
+        // 다른 소켓이 없을 때만 목록에서 완전히 제거 및 퇴장 메시지 발송
+        if (!otherSocketsInRoom) {
+          users.delete(username);
+          
+          const userList = Array.from(users);
+          io.to(roomId).emit("online-users", userList);
+
+          const leaveMessage: Message = {
+            id: `system-leave-${Date.now()}-${socketId}`,
+            content: `${username}님이 퇴장하셨습니다.`,
+            senderId: "system",
+            roomId: roomId,
+            timestamp: new Date().toISOString(),
+            type: "SYSTEM",
+          };
+          io.to(roomId).emit("receive-message", leaveMessage);
+          console.log(`[SOCKET_IO] User ${username} left room ${roomId} (socket: ${socketId})`);
+        }
+      }
+    }
+  };
     
   io.on("connection", (socket) => {
     console.log(`[SOCKET_IO] New client connected: ${socket.id}`);
 
     // 사용자가 채팅방에 입장할 때 호출
     socket.on("join-room", ({ username, roomId }: { username: string; roomId: string }) => {
+      // 기존에 다른 정보가 있었다면 정리 (혹은 같은 소켓으로 재입장 시)
+      handleUserLeave(socket.id);
+
       socket.join(roomId);
       socketInfo.set(socket.id, { username, roomId });
 
@@ -41,7 +92,7 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
       }
       roomUsers.get(roomId)!.add(username);
 
-      console.log(`[SOCKET_IO] User ${username} joined room ${roomId}`);
+      console.log(`[SOCKET_IO] User ${username} joined room ${roomId} (socket: ${socket.id})`);
       
       // 1. 해당 방의 클라이언트들에게 현재 방 접속자 목록 전송
       const userList = Array.from(roomUsers.get(roomId)!);
@@ -49,7 +100,7 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
 
       // 2. 입장 알림 시스템 메시지 발송
       const joinMessage: Message = {
-        id: `system-${Date.now()}-${socket.id}`,
+        id: `system-join-${Date.now()}-${socket.id}`,
         content: `${username}님이 입장하셨습니다.`,
         senderId: "system",
         roomId: roomId,
@@ -57,6 +108,15 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
         type: "SYSTEM",
       };
       io.to(roomId).emit("receive-message", joinMessage);
+    });
+
+    // 명시적인 방 퇴장 이벤트
+    socket.on("leave-room", () => {
+      const info = socketInfo.get(socket.id);
+      if (info) {
+        socket.leave(info.roomId);
+        handleUserLeave(socket.id);
+      }
     });
 
     socket.on("send-message", async (message: Message) => {
@@ -79,7 +139,7 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
           create: { id: message.roomId, name: "채팅방" },
         });
 
-        // 링크 프리뷰 추출 (기존 로직 유지)
+        // 링크 프리뷰 추출
         const urls = message.content.match(URL_REGEX);
         let previewData = null;
 
@@ -174,7 +234,7 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
         // 특정 방에만 전송
         io.to(message.roomId).emit("receive-message", broadcastMessage);
 
-        // 챗봇 응답 (특정 방에만)
+        // 챗봇 응답
         if (message.content.trim() === "/도움말") {
           setTimeout(async () => {
             const botContent = "무엇을 도와드릴까요? /도움말, /투표 명령어를 지원합니다.";
@@ -196,7 +256,6 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
 
     socket.on("vote", async ({ pollId, optionId, userId }) => {
       try {
-        // 투표 로직 (기존 유지하되 브로드캐스트 대상 한정)
         await db.vote.upsert({
           where: { userId_pollId: { userId, pollId } },
           update: { optionId },
@@ -233,27 +292,8 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
     });
 
     socket.on("disconnect", () => {
-      const info = socketInfo.get(socket.id);
-      if (info) {
-        const { username, roomId } = info;
-        socketInfo.delete(socket.id);
-        
-        if (roomUsers.has(roomId)) {
-          roomUsers.get(roomId)!.delete(username);
-          const userList = Array.from(roomUsers.get(roomId)!);
-          io.to(roomId).emit("online-users", userList);
-
-          const leaveMessage: Message = {
-            id: `system-leave-${Date.now()}`,
-            content: `${username}님이 퇴장하셨습니다.`,
-            senderId: "system",
-            roomId: roomId,
-            timestamp: new Date().toISOString(),
-            type: "SYSTEM",
-          };
-          io.to(roomId).emit("receive-message", leaveMessage);
-        }
-      }
+      console.log(`[SOCKET_IO] Client disconnected: ${socket.id}`);
+      handleUserLeave(socket.id);
     });
   });
 
