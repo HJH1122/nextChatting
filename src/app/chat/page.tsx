@@ -6,14 +6,27 @@ import { ChatLobby } from "@/components/chat/chat-lobby";
 
 export default function ChatPage() {
   const [status, setStatus] = useState<"lobby" | "chat">("lobby");
+  const [username, setUsername] = useState("");
+  const [isNameSet, setIsNameSet] = useState(false);
   const [chatInfo, setChatInfo] = useState({
-    username: "",
     roomId: "",
     roomName: "",
   });
 
-  const handleJoinRoom = (username: string, roomId: string, roomName: string) => {
-    setChatInfo({ username, roomId, roomName });
+  const handleSetName = (name: string) => {
+    setUsername(name);
+    setIsNameSet(true);
+  };
+
+  const handleLogout = () => {
+    setUsername("");
+    setIsNameSet(false);
+    setStatus("lobby");
+  };
+
+  const handleJoinRoom = (roomUsername: string, roomId: string, roomName: string) => {
+    // roomUsername is kept for compatibility with ChatLobby's onJoinRoom signature
+    setChatInfo({ roomId, roomName });
     setStatus("chat");
   };
 
@@ -35,10 +48,16 @@ export default function ChatPage() {
         
         <div className="flex-1 min-h-0">
           {status === "lobby" ? (
-            <ChatLobby onJoinRoom={handleJoinRoom} />
+            <ChatLobby 
+              onJoinRoom={handleJoinRoom} 
+              username={username}
+              isNameSet={isNameSet}
+              onSetName={handleSetName}
+              onLogout={handleLogout}
+            />
           ) : (
             <ChatRoom 
-              username={chatInfo.username}
+              username={username}
               roomId={chatInfo.roomId}
               roomName={chatInfo.roomName}
               onLeave={handleLeaveRoom}

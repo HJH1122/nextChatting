@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, List, MessageCircle, Loader2, User } from "lucide-react";
+import { Plus, List, MessageCircle, Loader2, User, LogOut } from "lucide-react";
 
 interface Room {
   id: string;
@@ -14,11 +14,14 @@ interface Room {
 
 interface ChatLobbyProps {
   onJoinRoom: (username: string, roomId: string, roomName: string) => void;
+  username: string;
+  isNameSet: boolean;
+  onSetName: (name: string) => void;
+  onLogout: () => void;
 }
 
-export const ChatLobby = ({ onJoinRoom }: ChatLobbyProps) => {
-  const [username, setUsername] = useState("");
-  const [isNameSet, setIsNameSet] = useState(false);
+export const ChatLobby = ({ onJoinRoom, username, isNameSet, onSetName, onLogout }: ChatLobbyProps) => {
+  const [localUsername, setLocalUsername] = useState(username);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [newRoomName, setNewRoomName] = useState("");
@@ -49,8 +52,8 @@ export const ChatLobby = ({ onJoinRoom }: ChatLobbyProps) => {
 
   const handleSetName = (e: React.FormEvent) => {
     e.preventDefault();
-    if (username.trim()) {
-      setIsNameSet(true);
+    if (localUsername.trim()) {
+      onSetName(localUsername.trim());
     }
   };
 
@@ -89,13 +92,13 @@ export const ChatLobby = ({ onJoinRoom }: ChatLobbyProps) => {
           <p className="text-sm text-zinc-500">사용하실 닉네임을 입력해주세요.</p>
           <form onSubmit={handleSetName} className="space-y-3">
             <Input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={localUsername}
+              onChange={(e) => setLocalUsername(e.target.value)}
               placeholder="닉네임 입력..."
               className="text-center"
               autoFocus
             />
-            <Button type="submit" className="w-full" disabled={!username.trim()}>
+            <Button type="submit" className="w-full" disabled={!localUsername.trim()}>
               들어가기
             </Button>
           </form>
@@ -108,9 +111,20 @@ export const ChatLobby = ({ onJoinRoom }: ChatLobbyProps) => {
   return (
     <div className="flex flex-col h-[600px] border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 shadow-sm overflow-hidden">
       <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 flex items-center justify-between">
-        <div>
-          <h2 className="font-bold text-lg">채팅 로비</h2>
-          <p className="text-xs text-blue-600">반가워요, {username}님!</p>
+        <div className="flex items-center gap-3">
+          <div>
+            <h2 className="font-bold text-lg">채팅 로비</h2>
+            <p className="text-xs text-blue-600">반가워요, {username}님!</p>
+          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={onLogout}
+            className="text-zinc-500 hover:text-red-500 transition-colors"
+            title="로그아웃"
+          >
+            <LogOut className="w-4 h-4" />
+          </Button>
         </div>
         <div className="flex gap-2">
           <Button 
