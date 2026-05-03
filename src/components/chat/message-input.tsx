@@ -150,6 +150,7 @@ export const MessageInput = ({
           type="file"
           ref={fileInputRef}
           onChange={handleFileChange}
+          accept=".pdf, .png, .jpg, .jpeg"
           className="hidden"
         />
         <div className="flex items-center gap-0.5">

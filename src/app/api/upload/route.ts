@@ -6,6 +6,10 @@ import { randomUUID } from "crypto";
 // 파일 크기 제한 (10MB)
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
+// 허용할 확장자 및 MIME 타입 정의
+const ALLOWED_EXTENSIONS = [".pdf", ".png", ".jpg", ".jpeg"];
+const ALLOWED_MIME_TYPES = ["application/pdf", "image/png", "image/jpeg"];
+
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
@@ -13,6 +17,23 @@ export async function POST(req: NextRequest) {
 
     if (!file) {
       return NextResponse.json({ error: "파일이 제공되지 않았습니다." }, { status: 400 });
+    }
+
+    // 1. 확장자 체크
+    const extension = path.extname(file.name).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(extension)) {
+      return NextResponse.json(
+        { error: `허용되지 않는 파일 형식입니다. (${ALLOWED_EXTENSIONS.join(", ")}만 가능)` }, 
+        { status: 400 }
+      );
+    }
+
+    // 2. MIME 타입 체크
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      return NextResponse.json(
+        { error: "지원하지 않는 파일 타입입니다." }, 
+        { status: 400 }
+      );
     }
 
     if (file.size > MAX_FILE_SIZE) {
@@ -30,7 +51,6 @@ export async function POST(req: NextRequest) {
     }
 
     const uniqueId = randomUUID();
-    const extension = path.extname(file.name);
     const fileName = `${uniqueId}${extension}`;
     const filePath = path.join(uploadDir, fileName);
 
