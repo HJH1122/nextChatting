@@ -182,6 +182,26 @@ export const MessageList = ({
         const isSystemMessage = message.type === "SYSTEM";
         const isBotMessage = message.type === "BOT";
         
+        // 날짜 구분선 표시 여부 결정
+        const currentDate = new Date(message.timestamp).toLocaleDateString("ko-KR", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          weekday: "long",
+        });
+        
+        const prevMessage = index > 0 ? messages[index - 1] : null;
+        const prevDate = prevMessage 
+          ? new Date(prevMessage.timestamp).toLocaleDateString("ko-KR", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+              weekday: "long",
+            })
+          : null;
+        
+        const showDateSeparator = currentDate !== prevDate;
+        
         // 검색 결과 강조 로직
         const isSearchResult = searchResults.some(m => m.id === message.id);
         const isActiveSearchResult = searchIndex !== -1 && searchResults[searchIndex]?.id === message.id;
@@ -190,166 +210,174 @@ export const MessageList = ({
         // 상단에 메시지가 추가될 때, 기존의 가장 첫 번째였던 메시지에 앵커를 걸어 스크롤 위치를 유지합니다.
         const isAnchor = index === messages.length - prevMessageCount;
 
-        if (isSystemMessage) {
-          return (
-            <div 
-              key={message.id} 
-              id={`message-${message.id}`}
-              className={`flex justify-center my-2 transition-colors duration-500 ${isHighlighted ? "bg-yellow-100/50 dark:bg-yellow-900/30 rounded-lg" : ""}`}
-              style={isAnchor ? { overflowAnchor: "auto" } : { overflowAnchor: "none" }}
-            >
-              <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-full px-4 py-1">
-                <p className="text-[11px] text-zinc-500 font-medium">
-                  {message.content}
-                </p>
-              </div>
-            </div>
-          );
-        }
-
         return (
-          <div
-            key={message.id}
-            id={`message-${message.id}`}
-            className={`flex flex-col ${isMyMessage ? "items-end" : "items-start"} transition-all duration-500 ${
-              isActiveSearchResult 
-                ? "scale-[1.02] bg-orange-100/50 dark:bg-orange-900/30 rounded-lg p-2 ring-2 ring-orange-400 dark:ring-orange-600 z-10" 
-                : isSearchResult
-                ? "bg-yellow-50/80 dark:bg-yellow-900/20 rounded-lg p-2 ring-1 ring-yellow-200 dark:ring-yellow-800"
-                : isHighlighted
-                ? "scale-[1.02] bg-yellow-50/50 dark:bg-yellow-900/20 rounded-lg p-2 ring-1 ring-yellow-200 dark:ring-yellow-800"
-                : ""
-            }`}
-            style={isAnchor ? { overflowAnchor: "auto" } : { overflowAnchor: "none" }}
-          >
-            <div className="flex items-center gap-1 mb-1 px-1">
-              <span className="text-xs text-zinc-500">
-                {isMyMessage ? "나" : (message.user?.name || message.senderId)}
-              </span>
-              {isBotMessage && (
-                <span className="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
-                  Bot
+          <div key={`group-${message.id}`} className="space-y-4">
+            {showDateSeparator && (
+              <div className="flex items-center justify-center my-6">
+                <div className="h-[1px] flex-1 bg-zinc-200 dark:bg-zinc-800" />
+                <span className="mx-4 text-[11px] font-semibold text-zinc-400 bg-white dark:bg-zinc-950 px-2 py-1 rounded-full border border-zinc-100 dark:border-zinc-800 shadow-sm">
+                  {currentDate}
                 </span>
-              )}
-            </div>
-            <div
-              className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                isMyMessage
-                  ? "bg-blue-600 text-white rounded-tr-none"
-                  : isBotMessage
-                  ? "bg-purple-50 text-purple-900 dark:bg-purple-900/20 dark:text-purple-100 border border-purple-100 dark:border-purple-800 rounded-tl-none"
-                  : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 rounded-tl-none"
-              }`}
-            >
-              {message.content && <p className="text-sm leading-relaxed">{message.content}</p>}
-              
-              {/* 설문조사 렌더링 */}
-              {message.poll && (
-                <PollDisplay 
-                  poll={message.poll} 
-                  currentUserId={currentUserId} 
-                  isMyMessage={isMyMessage} 
-                />
-              )}
-
-              {/* 첨부 파일 렌더링 */}
-              {message.attachments && message.attachments.length > 0 && (
-                <div className={`mt-2 space-y-2 ${message.content ? "pt-2 border-t border-white/10" : ""}`}>
-                  {message.attachments.map((attachment) => {
-                    const isImage = attachment.fileType?.startsWith("image/");
-                    
-                    if (isImage) {
-                      return (
-                        <div key={attachment.id} className="relative group rounded-lg overflow-hidden border border-white/10">
-                          <img 
-                            src={attachment.fileUrl} 
-                            alt={attachment.fileName || "image"} 
-                            className="max-h-60 w-auto object-contain cursor-pointer"
-                            onClick={() => window.open(attachment.fileUrl, "_blank")}
-                          />
-                          <a 
-                            href={attachment.fileUrl} 
-                            download={attachment.fileName}
-                            className="absolute bottom-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <Download className="w-3 h-3" />
-                          </a>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <a
-                        key={attachment.id}
-                        href={attachment.fileUrl}
-                        download={attachment.fileName}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                          isMyMessage 
-                            ? "bg-white/10 border-white/20 hover:bg-white/20 text-white" 
-                            : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                        }`}
-                      >
-                        <div className={`p-2 rounded-md ${isMyMessage ? "bg-white/20" : "bg-zinc-100 dark:bg-zinc-800"}`}>
-                          <FileIcon className="w-5 h-5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">{attachment.fileName}</p>
-                          <p className={`text-[10px] ${isMyMessage ? "text-blue-100" : "text-zinc-500"}`}>
-                            {attachment.fileSize ? `${(attachment.fileSize / 1024).toFixed(1)} KB` : "파일"}
-                          </p>
-                        </div>
-                        <Download className={`w-4 h-4 ${isMyMessage ? "text-white" : "text-zinc-400"}`} />
-                      </a>
-                    );
-                  })}
+                <div className="h-[1px] flex-1 bg-zinc-200 dark:bg-zinc-800" />
+              </div>
+            )}
+            
+            {isSystemMessage ? (
+              <div 
+                id={`message-${message.id}`}
+                className={`flex justify-center my-2 transition-colors duration-500 ${isHighlighted ? "bg-yellow-100/50 dark:bg-yellow-900/30 rounded-lg" : ""}`}
+                style={isAnchor ? { overflowAnchor: "auto" } : { overflowAnchor: "none" }}
+              >
+                <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-full px-4 py-1">
+                  <p className="text-[11px] text-zinc-500 font-medium">
+                    {message.content}
+                  </p>
                 </div>
-              )}
-
-              {/* 링크 프리뷰 카드 추가 */}
-              {message.preview && (
-                <a 
-                  href={message.preview.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className={`block mt-2 rounded-lg overflow-hidden border ${
-                    isMyMessage ? "bg-white/10 border-white/20" : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700"
+              </div>
+            ) : (
+              <div
+                id={`message-${message.id}`}
+                className={`flex flex-col ${isMyMessage ? "items-end" : "items-start"} transition-all duration-500 ${
+                  isActiveSearchResult 
+                    ? "scale-[1.02] bg-orange-100/50 dark:bg-orange-900/30 rounded-lg p-2 ring-2 ring-orange-400 dark:ring-orange-600 z-10" 
+                    : isSearchResult
+                    ? "bg-yellow-50/80 dark:bg-yellow-900/20 rounded-lg p-2 ring-1 ring-yellow-200 dark:ring-yellow-800"
+                    : isHighlighted
+                    ? "scale-[1.02] bg-yellow-50/50 dark:bg-yellow-900/20 rounded-lg p-2 ring-1 ring-yellow-200 dark:ring-yellow-800"
+                    : ""
+                }`}
+                style={isAnchor ? { overflowAnchor: "auto" } : { overflowAnchor: "none" }}
+              >
+                <div className="flex items-center gap-1 mb-1 px-1">
+                  <span className="text-xs text-zinc-500">
+                    {isMyMessage ? "나" : (message.user?.name || message.senderId)}
+                  </span>
+                  {isBotMessage && (
+                    <span className="bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">
+                      Bot
+                    </span>
+                  )}
+                </div>
+                <div
+                  className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                    isMyMessage
+                      ? "bg-blue-600 text-white rounded-tr-none"
+                      : isBotMessage
+                      ? "bg-purple-50 text-purple-900 dark:bg-purple-900/20 dark:text-purple-100 border border-purple-100 dark:border-purple-800 rounded-tl-none"
+                      : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 rounded-tl-none"
                   }`}
                 >
-                  {message.preview.image && (
-                    <div className="relative h-32 w-full">
-                      <img 
-                        src={message.preview.image} 
-                        alt={message.preview.title}
-                        className="object-cover w-full h-full"
-                      />
+                  {message.content && <p className="text-sm leading-relaxed">{message.content}</p>}
+                  
+                  {/* 설문조사 렌더링 */}
+                  {message.poll && (
+                    <PollDisplay 
+                      poll={message.poll} 
+                      currentUserId={currentUserId} 
+                      isMyMessage={isMyMessage} 
+                    />
+                  )}
+
+                  {/* 첨부 파일 렌더링 */}
+                  {message.attachments && message.attachments.length > 0 && (
+                    <div className={`mt-2 space-y-2 ${message.content ? "pt-2 border-t border-white/10" : ""}`}>
+                      {message.attachments.map((attachment) => {
+                        const isImage = attachment.fileType?.startsWith("image/");
+                        
+                        if (isImage) {
+                          return (
+                            <div key={attachment.id} className="relative group rounded-lg overflow-hidden border border-white/10">
+                              <img 
+                                src={attachment.fileUrl} 
+                                alt={attachment.fileName || "image"} 
+                                className="max-h-60 w-auto object-contain cursor-pointer"
+                                onClick={() => window.open(attachment.fileUrl, "_blank")}
+                              />
+                              <a 
+                                href={attachment.fileUrl} 
+                                download={attachment.fileName}
+                                className="absolute bottom-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <Download className="w-3 h-3" />
+                              </a>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <a
+                            key={attachment.id}
+                            href={attachment.fileUrl}
+                            download={attachment.fileName}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                              isMyMessage 
+                                ? "bg-white/10 border-white/20 hover:bg-white/20 text-white" 
+                                : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                            }`}
+                          >
+                            <div className={`p-2 rounded-md ${isMyMessage ? "bg-white/20" : "bg-zinc-100 dark:bg-zinc-800"}`}>
+                              <FileIcon className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium truncate">{attachment.fileName}</p>
+                              <p className={`text-[10px] ${isMyMessage ? "text-blue-100" : "text-zinc-500"}`}>
+                                {attachment.fileSize ? `${(attachment.fileSize / 1024).toFixed(1)} KB` : "파일"}
+                              </p>
+                            </div>
+                            <Download className={`w-4 h-4 ${isMyMessage ? "text-white" : "text-zinc-400"}`} />
+                          </a>
+                        );
+                      })}
                     </div>
                   )}
-                  <div className="p-2 space-y-1">
-                    <h4 className={`text-xs font-bold line-clamp-1 ${isMyMessage ? "text-white" : "text-zinc-900 dark:text-zinc-100"}`}>
-                      {message.preview.title}
-                    </h4>
-                    <p className={`text-[10px] line-clamp-2 ${isMyMessage ? "text-blue-100" : "text-zinc-500"}`}>
-                      {message.preview.description}
-                    </p>
-                    <p className={`text-[9px] uppercase tracking-wider ${isMyMessage ? "text-blue-200" : "text-zinc-400"}`}>
-                      {(() => {
-                        try {
-                          return new URL(message.preview.url).hostname;
-                        } catch {
-                          return message.preview.url;
-                        }
-                      })()}
-                    </p>
-                  </div>
-                </a>
-              )}
 
-              <p className={`text-[10px] mt-1 text-right ${isMyMessage ? "text-blue-100" : "text-zinc-500"}`}>
-                {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </p>
-            </div>
+                  {/* 링크 프리뷰 카드 추가 */}
+                  {message.preview && (
+                    <a 
+                      href={message.preview.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className={`block mt-2 rounded-lg overflow-hidden border ${
+                        isMyMessage ? "bg-white/10 border-white/20" : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700"
+                      }`}
+                    >
+                      {message.preview.image && (
+                        <div className="relative h-32 w-full">
+                          <img 
+                            src={message.preview.image} 
+                            alt={message.preview.title}
+                            className="object-cover w-full h-full"
+                          />
+                        </div>
+                      )}
+                      <div className="p-2 space-y-1">
+                        <h4 className={`text-xs font-bold line-clamp-1 ${isMyMessage ? "text-white" : "text-zinc-900 dark:text-zinc-100"}`}>
+                          {message.preview.title}
+                        </h4>
+                        <p className={`text-[10px] line-clamp-2 ${isMyMessage ? "text-blue-100" : "text-zinc-500"}`}>
+                          {message.preview.description}
+                        </p>
+                        <p className={`text-[9px] uppercase tracking-wider ${isMyMessage ? "text-blue-200" : "text-zinc-400"}`}>
+                          {(() => {
+                            try {
+                              return new URL(message.preview.url).hostname;
+                            } catch {
+                              return message.preview.url;
+                            }
+                          })()}
+                        </p>
+                      </div>
+                    </a>
+                  )}
+
+                  <p className={`text-[10px] mt-1 text-right ${isMyMessage ? "text-blue-100" : "text-zinc-500"}`}>
+                    {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         );
       })}
