@@ -258,121 +258,122 @@ export const MessageList = ({
                     </span>
                   )}
                 </div>
-                <div
-                  className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                    isMyMessage
-                      ? "bg-blue-600 text-white rounded-tr-none"
-                      : isBotMessage
-                      ? "bg-purple-50 text-purple-900 dark:bg-purple-900/20 dark:text-purple-100 border border-purple-100 dark:border-purple-800 rounded-tl-none"
-                      : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 rounded-tl-none"
-                  }`}
-                >
-                  {message.content && <p className="text-sm leading-relaxed">{message.content}</p>}
-                  
-                  {/* 설문조사 렌더링 */}
-                  {message.poll && (
-                    <PollDisplay 
-                      poll={message.poll} 
-                      currentUserId={currentUserId} 
-                      isMyMessage={isMyMessage} 
-                    />
-                  )}
+                <div className={`flex items-end gap-2 max-w-[85%] ${isMyMessage ? "flex-row-reverse" : "flex-row"}`}>
+                  <div
+                    className={`rounded-2xl px-4 py-2 ${
+                      isMyMessage
+                        ? "bg-blue-600 text-white rounded-tr-none"
+                        : isBotMessage
+                        ? "bg-purple-50 text-purple-900 dark:bg-purple-900/20 dark:text-purple-100 border border-purple-100 dark:border-purple-800 rounded-tl-none"
+                        : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 rounded-tl-none"
+                    }`}
+                  >
+                    {message.content && <p className="text-sm leading-relaxed">{message.content}</p>}
+                    
+                    {/* 설문조사 렌더링 */}
+                    {message.poll && (
+                      <PollDisplay 
+                        poll={message.poll} 
+                        currentUserId={currentUserId} 
+                        isMyMessage={isMyMessage} 
+                      />
+                    )}
 
-                  {/* 첨부 파일 렌더링 */}
-                  {message.attachments && message.attachments.length > 0 && (
-                    <div className={`mt-2 space-y-2 ${message.content ? "pt-2 border-t border-white/10" : ""}`}>
-                      {message.attachments.map((attachment) => {
-                        const isImage = attachment.fileType?.startsWith("image/");
-                        
-                        if (isImage) {
+                    {/* 첨부 파일 렌더링 */}
+                    {message.attachments && message.attachments.length > 0 && (
+                      <div className={`mt-2 space-y-2 ${message.content ? "pt-2 border-t border-white/10" : ""}`}>
+                        {message.attachments.map((attachment) => {
+                          const isImage = attachment.fileType?.startsWith("image/");
+                          
+                          if (isImage) {
+                            return (
+                              <div key={attachment.id} className="relative group rounded-lg overflow-hidden border border-white/10">
+                                <img 
+                                  src={attachment.fileUrl} 
+                                  alt={attachment.fileName || "image"} 
+                                  className="max-h-60 w-auto object-contain cursor-pointer"
+                                  onClick={() => window.open(attachment.fileUrl, "_blank")}
+                                />
+                                <a 
+                                  href={attachment.fileUrl} 
+                                  download={attachment.fileName}
+                                  className="absolute bottom-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <Download className="w-3 h-3" />
+                                </a>
+                              </div>
+                            );
+                          }
+
                           return (
-                            <div key={attachment.id} className="relative group rounded-lg overflow-hidden border border-white/10">
-                              <img 
-                                src={attachment.fileUrl} 
-                                alt={attachment.fileName || "image"} 
-                                className="max-h-60 w-auto object-contain cursor-pointer"
-                                onClick={() => window.open(attachment.fileUrl, "_blank")}
-                              />
-                              <a 
-                                href={attachment.fileUrl} 
-                                download={attachment.fileName}
-                                className="absolute bottom-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                              >
-                                <Download className="w-3 h-3" />
-                              </a>
-                            </div>
+                            <a
+                              key={attachment.id}
+                              href={attachment.fileUrl}
+                              download={attachment.fileName}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                                isMyMessage 
+                                  ? "bg-white/10 border-white/20 hover:bg-white/20 text-white" 
+                                  : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                              }`}
+                            >
+                              <div className={`p-2 rounded-md ${isMyMessage ? "bg-white/20" : "bg-zinc-100 dark:bg-zinc-800"}`}>
+                                <FileIcon className="w-5 h-5" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium truncate">{attachment.fileName}</p>
+                                <p className={`text-[10px] ${isMyMessage ? "text-blue-100" : "text-zinc-500"}`}>
+                                  {attachment.fileSize ? `${(attachment.fileSize / 1024).toFixed(1)} KB` : "파일"}
+                                </p>
+                              </div>
+                              <Download className={`w-4 h-4 ${isMyMessage ? "text-white" : "text-zinc-400"}`} />
+                            </a>
                           );
-                        }
-
-                        return (
-                          <a
-                            key={attachment.id}
-                            href={attachment.fileUrl}
-                            download={attachment.fileName}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                              isMyMessage 
-                                ? "bg-white/10 border-white/20 hover:bg-white/20 text-white" 
-                                : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-                            }`}
-                          >
-                            <div className={`p-2 rounded-md ${isMyMessage ? "bg-white/20" : "bg-zinc-100 dark:bg-zinc-800"}`}>
-                              <FileIcon className="w-5 h-5" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium truncate">{attachment.fileName}</p>
-                              <p className={`text-[10px] ${isMyMessage ? "text-blue-100" : "text-zinc-500"}`}>
-                                {attachment.fileSize ? `${(attachment.fileSize / 1024).toFixed(1)} KB` : "파일"}
-                              </p>
-                            </div>
-                            <Download className={`w-4 h-4 ${isMyMessage ? "text-white" : "text-zinc-400"}`} />
-                          </a>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {/* 링크 프리뷰 카드 추가 */}
-                  {message.preview && (
-                    <a 
-                      href={message.preview.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className={`block mt-2 rounded-lg overflow-hidden border ${
-                        isMyMessage ? "bg-white/10 border-white/20" : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700"
-                      }`}
-                    >
-                      {message.preview.image && (
-                        <div className="relative h-32 w-full">
-                          <img 
-                            src={message.preview.image} 
-                            alt={message.preview.title}
-                            className="object-cover w-full h-full"
-                          />
-                        </div>
-                      )}
-                      <div className="p-2 space-y-1">
-                        <h4 className={`text-xs font-bold line-clamp-1 ${isMyMessage ? "text-white" : "text-zinc-900 dark:text-zinc-100"}`}>
-                          {message.preview.title}
-                        </h4>
-                        <p className={`text-[10px] line-clamp-2 ${isMyMessage ? "text-blue-100" : "text-zinc-500"}`}>
-                          {message.preview.description}
-                        </p>
-                        <p className={`text-[9px] uppercase tracking-wider ${isMyMessage ? "text-blue-200" : "text-zinc-400"}`}>
-                          {(() => {
-                            try {
-                              return new URL(message.preview.url).hostname;
-                            } catch {
-                              return message.preview.url;
-                            }
-                          })()}
-                        </p>
+                        })}
                       </div>
-                    </a>
-                  )}
+                    )}
 
-                  <p className={`text-[10px] mt-1 text-right ${isMyMessage ? "text-blue-100" : "text-zinc-500"}`}>
+                    {/* 링크 프리뷰 카드 추가 */}
+                    {message.preview && (
+                      <a 
+                        href={message.preview.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className={`block mt-2 rounded-lg overflow-hidden border ${
+                          isMyMessage ? "bg-white/10 border-white/20" : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700"
+                        }`}
+                      >
+                        {message.preview.image && (
+                          <div className="relative h-32 w-full">
+                            <img 
+                              src={message.preview.image} 
+                              alt={message.preview.title}
+                              className="object-cover w-full h-full"
+                            />
+                          </div>
+                        )}
+                        <div className="p-2 space-y-1">
+                          <h4 className={`text-xs font-bold line-clamp-1 ${isMyMessage ? "text-white" : "text-zinc-900 dark:text-zinc-100"}`}>
+                            {message.preview.title}
+                          </h4>
+                          <p className={`text-[10px] line-clamp-2 ${isMyMessage ? "text-blue-100" : "text-zinc-500"}`}>
+                            {message.preview.description}
+                          </p>
+                          <p className={`text-[9px] uppercase tracking-wider ${isMyMessage ? "text-blue-200" : "text-zinc-400"}`}>
+                            {(() => {
+                              try {
+                                return new URL(message.preview.url).hostname;
+                              } catch {
+                                return message.preview.url;
+                              }
+                            })()}
+                          </p>
+                        </div>
+                      </a>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-zinc-500 mb-1 whitespace-nowrap">
                     {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
