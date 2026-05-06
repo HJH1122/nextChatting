@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, List, MessageCircle, Loader2, User, LogOut } from "lucide-react";
+import { Plus, MessageCircle, Loader2, User, LogOut } from "lucide-react";
 
 interface Room {
   id: string;
@@ -127,14 +127,6 @@ export const ChatLobby = ({ onJoinRoom, username, isNameSet, onSetName, onLogout
           </Button>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant={view === "list" ? "default" : "outline"} 
-            size="sm" 
-            onClick={() => setView("list")}
-            className="flex items-center gap-1"
-          >
-            <List className="w-4 h-4" /> 목록
-          </Button>
           <Button 
             variant={view === "create" ? "default" : "outline"} 
             size="sm" 
