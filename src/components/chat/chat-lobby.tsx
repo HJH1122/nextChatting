@@ -28,6 +28,11 @@ export const ChatLobby = ({ onJoinRoom, username, isNameSet, onSetName, onLogout
   const [isCreating, setIsCreating] = useState(false);
   const [view, setView] = useState<"list" | "create">("list");
 
+  // Sync localUsername with prop (important for clearing on logout)
+  useEffect(() => {
+    setLocalUsername(username);
+  }, [username]);
+
   // 방 목록 가져오기
   const fetchRooms = async () => {
     try {
