@@ -123,12 +123,12 @@ export const ChatLobby = ({ onJoinRoom, username, isNameSet, onSetName, onLogout
           </div>
           <Button 
             variant="ghost" 
-            size="icon" 
+            size="sm" 
             onClick={onLogout}
-            className="text-zinc-500 hover:text-red-500 transition-colors"
-            title="로그아웃"
+            className="text-zinc-500 hover:text-red-500 transition-colors flex items-center gap-2"
           >
             <LogOut className="w-4 h-4" />
+            <span>로그아웃</span>
           </Button>
         </div>
         <div className="flex gap-2">
