@@ -1,43 +1,47 @@
 # Chat Service Implementation Guide (WebSocket)
 
-이 파일은 이 프로젝트에 실시간 채팅 서비스를 구현하기 위한 단계별 가이드와 기술 표준을 정의합니다.
+이 파일은 이 프로젝트에 구현된 실시간 채팅 서비스의 아키텍처, 기능 명세 및 개발 표준을 정의합니다.
 
-## 1. 기술 스택 권장 사항
-- **실시간 엔진:** `Socket.io` (Next.js와 호환성이 높고 안정적임)
-- **상태 관리:** `React Context` 또는 `TanStack Query` (서버 데이터 동기화)
-- **데이터베이스:** `Prisma` + `PostgreSQL` (메시지 이력 저장 및 관계형 데이터 관리)
-- **UI:** 기존 `src/components/ui`의 Shadcn UI 컴포넌트 활용
+## 1. 기술 스택
+- **실시간 엔진:** `Socket.io` (Pages Router API Route 기반 핸들러)
+- **프레임워크:** `Next.js` (App Router + Pages Router 혼합 사용)
+- **데이터베이스:** `Prisma` + `PostgreSQL`
+- **상태 관리:** `SocketContext` (클라이언트 소켓 인스턴스 관리)
+- **UI 라이브러리:** `Shadcn UI`, `Tailwind CSS`, `SCSS Module`
 
-## 2. 구현 단계 (Roadmap)
+## 2. 주요 구현 기능
 
-### 1단계: 소켓 서버 환경 구축
-1. **패키지 설치:** `npm install socket.io socket.io-client`
-2. **서버 핸들러 작성:** Next.js API Route(또는 별도 서버)에 소켓 초기화 로직 구현.
-3. **연결 테스트:** 클라이언트와 서버 간의 기본적인 `connection` 이벤트 확인.
+### 2.1 실시간 통신 (WebSocket)
+- **Room 기반 통신:** `socket.join(roomId)`를 통한 방 별 메시지 격리.
+- **접속자 관리:** 방별 실시간 접속자 목록(`online-users`) 제공.
+- **상태 동기화:** 입력 중 표시(`typing`), 퇴장/입장 시스템 메시지 발송.
 
-### 2단계: 클라이언트 소켓 통합
-1. **Socket Provider:** `src/components/providers/socket-provider.tsx`를 생성하여 앱 전체에서 소켓 인스턴스 공유.
-2. **커스텀 훅:** `useSocket` 훅을 만들어 컴포넌트에서 쉽게 소켓 기능을 사용하도록 구현.
+### 2.2 메시지 기능
+- **이력 로드:** 커서 기반 무한 스크롤(Infinite Scroll) 지원 (`/api/messages`).
+- **메시지 검색:** 특정 키워드를 통한 과거 내역 검색 지원 (`/api/messages/search`).
+- **링크 프리뷰:** 메시지 내 URL 감지 시 `link-preview-js`를 이용한 메타데이터 자동 추출 및 표시.
+- **파일 공유:** 이미지(PNG, JPG), PDF 파일 업로드 및 공유 기능 (`/api/upload`).
 
-### 3단계: 채팅 UI 및 기본 통신
-1. **컴포넌트 개발:** `ChatRoom`, `MessageList`, `MessageInput` 컴포넌트 생성.
-2. **이벤트 처리:**
-   - `send-message`: 메시지 전송 시 서버로 방출.
-   - `receive-message`: 서버로부터 받은 메시지를 화면에 실시간 반영.
+### 2.3 설문조사 (Poll)
+- **동적 생성:** 메시지 입력창을 통한 설문 생성 및 발송.
+- **실시간 투표:** `Socket.io`를 통한 실시간 투표 결과 업데이트 및 데이터베이스 동기화.
 
-### 4단계: 데이터베이스 연동 및 이력 관리
-1. **스키마 설계:** `User`, `Room`, `Message` 모델 정의.
-2. **메시지 저장:** 소켓 이벤트 발생 시 DB에 메시지 영구 저장.
-3. **이력 불러오기:** 채팅방 입장 시 최신 대화 내역(예: 50개) 로드 및 무한 스크롤 구현.
+### 2.4 챗봇 (Bot Helper)
+- **명령어 지원:** `/도움말` 등 특정 명령어에 대응하는 자동 응답 시스템.
 
-### 5단계: 서비스 고도화 (Advanced)
-1. **채팅방(Room) 기능:** `socket.join(roomId)`를 이용한 개별 대화방 격리.
-2. **입력 중 표시 (Typing Indicator):** 유저가 타이핑 중일 때 상태 공유.
-3. **읽음 처리:** 상대방이 메시지를 확인했을 때 `isRead` 상태 업데이트.
-4. **알림:** 브라우저 알림(Web Notification) 연동.
+## 3. 아키텍처 구조
 
----
-## 3. 개발 규칙
-- **Type Safety:** 모든 소켓 이벤트 페이로드에 대해 TypeScript interface를 정의할 것.
-- **Styling:** 기존 프로젝트의 SCSS Module 및 Tailwind CSS 컨벤션을 엄격히 준수할 것.
-- **Security:** 환경 변수(`.env`)를 사용하여 소켓 서버 URL 및 보안 설정을 관리할 것.
+### 3.1 서버 (Server-side)
+- `src/pages/api/socket/io.ts`: Socket.io 서버 초기화 및 이벤트 리스너(메시지 저장, 프리뷰 추출, 투표 처리 등) 정의.
+- `src/lib/socket.ts`: 싱글톤 소켓 인스턴스 관리.
+- `src/app/api/`: REST API 엔드포인트 (파일 업로드, 메시지 조회/검색).
+
+### 3.2 클라이언트 (Client-side)
+- `src/components/providers/socket-provider.tsx`: 전역 소켓 컨텍스트 제공.
+- `src/components/chat/`: 채팅 UI 구성 요소 (Room, List, Input, Poll 등).
+
+## 4. 개발 규칙 및 보안
+- **Type Safety:** `src/types/socket.d.ts`에 정의된 인터페이스를 엄격히 준수할 것.
+- **파일 업로드 제한:** 최대 10MB, 허용된 확장자(PDF, PNG, JPG)만 처리 가능.
+- **에러 핸들링:** 소켓 이벤트 및 API 요청 시 반드시 try-catch 블록을 사용하고 적절한 로그를 남길 것.
+- **환경 변수:** `DATABASE_URL`, `NEXT_PUBLIC_SITE_URL` 등 중요 설정은 `.env`에서 관리.
