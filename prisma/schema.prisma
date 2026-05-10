@@ -10,18 +10,21 @@ datasource db {
 
 
 model User {
-  id        String    @id @default(cuid())
-  name      String?
-  imageUrl  String?   @db.Text
-  messages  Message[]
-  votes     Vote[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id           String    @id @default(cuid())
+  name         String?
+  imageUrl     String?   @db.Text
+  messages     Message[]
+  createdRooms Room[]    @relation("RoomCreator")
+  votes        Vote[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
 
 model Room {
   id        String    @id @default(cuid())
   name      String
+  creatorId String
+  creator   User      @relation("RoomCreator", fields: [creatorId], references: [id], onDelete: Cascade)
   messages  Message[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

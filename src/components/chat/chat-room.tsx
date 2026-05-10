@@ -7,19 +7,21 @@ import { MessageList } from "./message-list";
 import { MessageInput } from "./message-input";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Users, Search, X, ChevronUp, ChevronDown, Loader2, ArrowLeft } from "lucide-react";
+import { Users, Search, X, ChevronUp, ChevronDown, Loader2, ArrowLeft, Trash2 } from "lucide-react";
 
 interface ChatRoomProps {
   username: string;
   roomId: string;
   roomName: string;
+  creatorId: string;
   onLeave: () => void;
 }
 
-export const ChatRoom = ({ username, roomId, roomName, onLeave }: ChatRoomProps) => {
+export const ChatRoom = ({ username, roomId, roomName, creatorId, onLeave }: ChatRoomProps) => {
   const { socket, isConnected } = useSocket();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isFetchingNextPage, setIsFetchingNextPage] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
@@ -41,6 +43,27 @@ export const ChatRoom = ({ username, roomId, roomName, onLeave }: ChatRoomProps)
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const currentUserId = username;
+
+  const handleDeleteRoom = async () => {
+    if (!window.confirm("정말로 이 채팅방을 삭제하시겠습니까? 모든 대화 내용이 삭제됩니다.")) return;
+
+    try {
+      setIsDeleting(true);
+      const response = await fetch(`/api/rooms/${roomId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ creatorId: username }),
+      });
+
+      if (!response.ok) {
+        throw new Error("삭제 실패");
+      }
+      // 삭제 성공 시 소켓 이벤트(room-deleted)가 발생하여 handleLeave가 호출될 것임
+    } catch (error) {
+      alert("채팅방 삭제에 실패했습니다.");
+      setIsDeleting(false);
+    }
+  };
 
   // 검색 로직
   const handleSearch = async (e?: React.FormEvent, direction: "next" | "prev" = "next") => {
@@ -200,6 +223,13 @@ export const ChatRoom = ({ username, roomId, roomName, onLeave }: ChatRoomProps)
       );
     });
 
+    socket.on("room-deleted", ({ roomId: deletedRoomId }: { roomId: string }) => {
+      if (deletedRoomId === roomId) {
+        alert("채팅방이 방장에 의해 삭제되었습니다.");
+        onLeave();
+      }
+    });
+
     socket.emit("join-room", { username, roomId });
 
     return () => {
@@ -209,8 +239,9 @@ export const ChatRoom = ({ username, roomId, roomName, onLeave }: ChatRoomProps)
       socket.off("user-stop-typing");
       socket.off("online-users");
       socket.off("poll-update");
+      socket.off("room-deleted");
     };
-  }, [socket, roomId, username]);
+  }, [socket, roomId, username, onLeave]);
 
   const onSendMessage = useCallback(
     (content: string, attachments?: Attachment[], poll?: any) => {
@@ -294,6 +325,17 @@ export const ChatRoom = ({ username, roomId, roomName, onLeave }: ChatRoomProps)
         </div>
         {!showSearch && (
           <div className="flex items-center gap-4">
+            {username === creatorId && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleDeleteRoom} 
+                disabled={isDeleting}
+                className="h-8 w-8 text-zinc-500 hover:text-red-500"
+              >
+                {isDeleting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+              </Button>
+            )}
             <Button variant="ghost" size="icon" onClick={() => setShowSearch(true)} className="h-8 w-8 text-zinc-500">
               <Search className="w-5 h-5" />
             </Button>

@@ -8,12 +8,13 @@ import { Plus, MessageCircle, Loader2, User, LogOut } from "lucide-react";
 interface Room {
   id: string;
   name: string;
+  creatorId: string;
   createdAt: string;
   participantCount: number;
 }
 
 interface ChatLobbyProps {
-  onJoinRoom: (username: string, roomId: string, roomName: string) => void;
+  onJoinRoom: (username: string, roomId: string, roomName: string, creatorId: string) => void;
   username: string;
   isNameSet: boolean;
   onSetName: (name: string) => void;
@@ -71,12 +72,15 @@ export const ChatLobby = ({ onJoinRoom, username, isNameSet, onSetName, onLogout
       const response = await fetch("/api/rooms", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newRoomName }),
+        body: JSON.stringify({ 
+          name: newRoomName,
+          creatorId: username 
+        }),
       });
 
       if (response.ok) {
         const newRoom = await response.json();
-        onJoinRoom(username, newRoom.id, newRoom.name);
+        onJoinRoom(username, newRoom.id, newRoom.name, newRoom.creatorId);
       }
     } catch (error) {
       console.error("Failed to create room:", error);
@@ -160,7 +164,7 @@ export const ChatLobby = ({ onJoinRoom, username, isNameSet, onSetName, onLogout
               rooms.map((room) => (
                 <div 
                   key={room.id}
-                  onClick={() => onJoinRoom(username, room.id, room.name)}
+                  onClick={() => onJoinRoom(username, room.id, room.name, room.creatorId)}
                   className="flex items-center justify-between p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:border-blue-500 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 cursor-pointer transition-all group"
                 >
                   <div className="flex items-center gap-3">

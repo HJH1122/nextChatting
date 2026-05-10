@@ -136,7 +136,11 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
         await db.room.upsert({
           where: { id: message.roomId },
           update: {},
-          create: { id: message.roomId, name: "채팅방" },
+          create: { 
+            id: message.roomId, 
+            name: "채팅방",
+            creatorId: message.senderId
+          },
         });
 
         // 링크 프리뷰 추출

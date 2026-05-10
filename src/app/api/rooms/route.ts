@@ -43,15 +43,30 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { name } = await req.json();
+    const { name, creatorId } = await req.json();
 
     if (!name) {
       return new NextResponse("Name is required", { status: 400 });
     }
 
+    if (!creatorId) {
+      return new NextResponse("Creator ID is required", { status: 400 });
+    }
+
+    // Ensure the creator user exists
+    await db.user.upsert({
+      where: { id: creatorId },
+      update: {},
+      create: { 
+        id: creatorId, 
+        name: creatorId 
+      },
+    });
+
     const room = await db.room.create({
       data: {
         name,
+        creatorId,
       },
     });
 

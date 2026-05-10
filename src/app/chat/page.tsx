@@ -11,6 +11,7 @@ export default function ChatPage() {
   const [chatInfo, setChatInfo] = useState({
     roomId: "",
     roomName: "",
+    creatorId: "",
   });
 
   const handleSetName = (name: string) => {
@@ -24,9 +25,9 @@ export default function ChatPage() {
     setStatus("lobby");
   };
 
-  const handleJoinRoom = (roomUsername: string, roomId: string, roomName: string) => {
+  const handleJoinRoom = (roomUsername: string, roomId: string, roomName: string, creatorId?: string) => {
     // roomUsername is kept for compatibility with ChatLobby's onJoinRoom signature
-    setChatInfo({ roomId, roomName });
+    setChatInfo({ roomId, roomName, creatorId: creatorId || "" });
     setStatus("chat");
   };
 
@@ -60,6 +61,7 @@ export default function ChatPage() {
               username={username}
               roomId={chatInfo.roomId}
               roomName={chatInfo.roomName}
+              creatorId={chatInfo.creatorId}
               onLeave={handleLeaveRoom}
             />
           )}
