@@ -328,12 +328,13 @@ export const ChatRoom = ({ username, roomId, roomName, creatorId, onLeave }: Cha
             {username === creatorId && (
               <Button 
                 variant="ghost" 
-                size="icon" 
+                size="sm" 
                 onClick={handleDeleteRoom} 
                 disabled={isDeleting}
-                className="h-8 w-8 text-zinc-500 hover:text-red-500"
+                className="text-zinc-500 hover:text-red-500 flex items-center gap-1.5"
               >
-                {isDeleting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                <span className="text-xs font-medium">채팅방삭제</span>
               </Button>
             )}
             <Button variant="ghost" size="icon" onClick={() => setShowSearch(true)} className="h-8 w-8 text-zinc-500">
