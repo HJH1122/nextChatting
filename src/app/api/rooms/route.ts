@@ -6,16 +6,9 @@ export async function GET() {
   try {
     const io = getSafeIo();
     
-    // Check if the Socket.IO server is initialized
-    if (!io) {
-      console.warn("[ROOMS_GET] Socket.IO server not initialized. Cannot retrieve participant counts.");
-      const rooms = await db.room.findMany({
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
-      return NextResponse.json(rooms.map(room => ({ ...room, participantCount: 0 })));
-    }
+    // global에 저장된 roomUsers 가져오기
+    const globalForSocket = global as any;
+    const roomUsers = globalForSocket.roomUsers as Map<string, Set<string>>;
 
     const rooms = await db.room.findMany({
       orderBy: {
@@ -23,13 +16,15 @@ export async function GET() {
       },
     });
 
-    // Augment rooms with participant counts if io is available
+    // Augment rooms with participant counts and list if available
     const roomsWithParticipants = rooms.map(room => {
-      // Get the number of users in the room from the socket adapter
-      const participantCount = io.sockets.adapter.rooms.get(room.id)?.size || 0;
+      const userSet = roomUsers?.get(room.id);
+      const participants = userSet ? Array.from(userSet) : [];
+      
       return {
         ...room,
-        participantCount,
+        participantCount: participants.length,
+        participants,
       };
     });
 

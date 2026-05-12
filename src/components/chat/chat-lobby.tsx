@@ -11,6 +11,7 @@ interface Room {
   creatorId: string;
   createdAt: string;
   participantCount: number;
+  participants: string[];
 }
 
 interface ChatLobbyProps {
@@ -165,25 +166,47 @@ export const ChatLobby = ({ onJoinRoom, username, isNameSet, onSetName, onLogout
                 <div 
                   key={room.id}
                   onClick={() => onJoinRoom(username, room.id, room.name, room.creatorId)}
-                  className="flex items-center justify-between p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:border-blue-500 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 cursor-pointer transition-all group"
+                  className="relative group"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30">
-                      <MessageCircle className="w-5 h-5 text-zinc-500 group-hover:text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium">{room.name}</p>
-                      <div className="flex items-center text-xs text-zinc-500 gap-2">
-                        <p>{new Date(room.createdAt).toLocaleDateString()} 생성</p>
-                        <span className="flex items-center gap-1">
-                          <User className="w-3 h-3" /> {room.participantCount}
-                        </span>
+                  <div className="flex items-center justify-between p-4 border border-zinc-200 dark:border-zinc-800 rounded-lg hover:border-blue-500 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 cursor-pointer transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30">
+                        <MessageCircle className="w-5 h-5 text-zinc-500 group-hover:text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{room.name}</p>
+                        <div className="flex items-center text-xs text-zinc-500 gap-2">
+                          <p>{new Date(room.createdAt).toLocaleDateString()} 생성</p>
+                          <span className="flex items-center gap-1">
+                            <User className="w-3 h-3" /> {room.participantCount}
+                          </span>
+                        </div>
                       </div>
                     </div>
+                    <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      입장하기
+                    </Button>
                   </div>
-                  <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    입장하기
-                  </Button>
+
+                  {/* 접속자 목록 팝오버 (호버 시 표시) */}
+                  <div className="absolute left-1/2 -bottom-2 translate-y-full -translate-x-1/2 w-48 p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md shadow-xl z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                    <p className="text-[11px] font-bold text-zinc-400 mb-2 uppercase tracking-wider">현재 접속자</p>
+                    <div className="space-y-1.5">
+                      {room.participants.filter(p => p !== username).length > 0 ? (
+                        room.participants
+                          .filter(p => p !== username)
+                          .map((participant, i) => (
+                            <div key={i} className="flex items-center gap-2 text-xs">
+                              <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                              <span className="truncate">{participant}</span>
+                            </div>
+                          ))
+                      ) : (
+                        <p className="text-[11px] text-zinc-500 italic">다른 접속자가 없습니다.</p>
+                      )}
+                    </div>
+                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white dark:bg-zinc-900 border-t border-l border-zinc-200 dark:border-zinc-800 rotate-45" />
+                  </div>
                 </div>
               ))
             )}
