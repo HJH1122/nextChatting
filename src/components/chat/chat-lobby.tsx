@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, MessageCircle, Loader2, User, LogOut } from "lucide-react";
+import { Plus, MessageCircle, Loader2, User, LogOut, Crown } from "lucide-react";
 
 interface Room {
   id: string;
@@ -192,15 +192,20 @@ export const ChatLobby = ({ onJoinRoom, username, isNameSet, onSetName, onLogout
                   <div className="absolute left-1/2 -bottom-2 translate-y-full -translate-x-1/2 w-48 p-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-md shadow-xl z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                     <p className="text-[11px] font-bold text-zinc-400 mb-2 uppercase tracking-wider">현재 접속자</p>
                     <div className="space-y-1.5">
-                      {room.participants.filter(p => p !== username).length > 0 ? (
-                        room.participants
-                          .filter(p => p !== username)
-                          .map((participant, i) => (
-                            <div key={i} className="flex items-center gap-2 text-xs">
+                      {room.participants.length > 0 ? (
+                        room.participants.map((participant, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs">
+                            {participant === room.creatorId ? (
+                              <Crown className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                            ) : (
                               <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                              <span className="truncate">{participant}</span>
-                            </div>
-                          ))
+                            )}
+                            <span className={`truncate ${participant === room.creatorId ? "font-bold text-blue-600" : ""}`}>
+                              {participant}
+                              {participant === username && " (나)"}
+                            </span>
+                          </div>
+                        ))
                       ) : (
                         <p className="text-[11px] text-zinc-500 italic">다른 접속자가 없습니다.</p>
                       )}

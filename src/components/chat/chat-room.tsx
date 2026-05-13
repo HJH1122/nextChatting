@@ -7,7 +7,7 @@ import { MessageList } from "./message-list";
 import { MessageInput } from "./message-input";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Users, Search, X, ChevronUp, ChevronDown, Loader2, ArrowLeft, Trash2 } from "lucide-react";
+import { Users, Search, X, ChevronUp, ChevronDown, Loader2, ArrowLeft, Trash2, Crown } from "lucide-react";
 
 interface ChatRoomProps {
   username: string;
@@ -362,8 +362,15 @@ export const ChatRoom = ({ username, roomId, roomName, creatorId, onLeave }: Cha
             ) : (
               onlineUsers.map((user) => (
                 <div key={user} className="flex items-center gap-2 px-2 py-1.5 rounded-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 text-sm">
-                  <div className="w-2 h-2 rounded-full bg-green-500" />
-                  <span className={user === username ? "font-bold text-blue-600" : ""}>{user}</span>
+                  {user === creatorId ? (
+                    <Crown className="w-3 h-3 text-yellow-500 fill-yellow-500" />
+                  ) : (
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                  )}
+                  <span className={`truncate ${user === creatorId ? "font-bold text-blue-600" : user === username ? "font-bold text-blue-600" : ""}`}>
+                    {user}
+                    {user === username && " (나)"}
+                  </span>
                 </div>
               ))
             )}
