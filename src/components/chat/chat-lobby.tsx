@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus, MessageCircle, Loader2, User, LogOut, Crown } from "lucide-react";
+import { Plus, MessageCircle, Loader2, User, LogOut, Crown, RefreshCw } from "lucide-react";
 
 interface Room {
   id: string;
@@ -26,6 +26,7 @@ export const ChatLobby = ({ onJoinRoom, username, isNameSet, onSetName, onLogout
   const [localUsername, setLocalUsername] = useState(username);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [newRoomName, setNewRoomName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [view, setView] = useState<"list" | "create">("list");
@@ -43,6 +44,7 @@ export const ChatLobby = ({ onJoinRoom, username, isNameSet, onSetName, onLogout
       if (response.ok) {
         const data = await response.json();
         setRooms(data);
+        setLastUpdated(new Date());
       }
     } catch (error) {
       console.error("Failed to fetch rooms:", error);
@@ -124,7 +126,9 @@ export const ChatLobby = ({ onJoinRoom, username, isNameSet, onSetName, onLogout
         <div className="flex items-center gap-3">
           <div>
             <h2 className="font-bold text-lg">채팅 로비</h2>
-            <p className="text-xs text-blue-600">반가워요, {username}님!</p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-blue-600">반가워요, {username}님!</p>
+            </div>
           </div>
           <Button 
             variant="ghost" 
@@ -133,10 +137,29 @@ export const ChatLobby = ({ onJoinRoom, username, isNameSet, onSetName, onLogout
             className="text-zinc-500 hover:text-red-500 transition-colors flex items-center gap-2"
           >
             <LogOut className="w-4 h-4" />
-            <span>로그아웃</span>
+            <span className="hidden sm:inline">로그아웃</span>
           </Button>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          {view === "list" && (
+            <>
+              {lastUpdated && (
+                <span className="text-[10px] text-zinc-400">
+                  업데이트: {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </span>
+              )}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={fetchRooms}
+                disabled={isLoading}
+                className="flex items-center gap-1"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+                <span className="hidden sm:inline">새로고침</span>
+              </Button>
+            </>
+          )}
           <Button 
             variant={view === "create" ? "default" : "outline"} 
             size="sm" 
