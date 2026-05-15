@@ -2,8 +2,10 @@
 
 import { Message } from "@/types/socket";
 import { useEffect, useRef, useState } from "react";
-import { Loader2, FileIcon, Download, Image as ImageIcon, Paperclip } from "lucide-react";
+import { Loader2, FileIcon, Download, Image as ImageIcon, Paperclip, Pencil, X as CloseIcon, Check, Trash2 } from "lucide-react";
 import { PollDisplay } from "./poll-display";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 
 interface MessageListProps {
   messages: Message[];
@@ -16,6 +18,8 @@ interface MessageListProps {
   onScrollComplete?: () => void;
   searchResults?: Message[];
   searchIndex?: number;
+  onEditMessage?: (messageId: string, content: string) => void;
+  onDeleteMessage?: (messageId: string) => void;
 }
 
 export const MessageList = ({ 
@@ -28,7 +32,9 @@ export const MessageList = ({
   scrollToMessageId,
   onScrollComplete,
   searchResults = [],
-  searchIndex = -1
+  searchIndex = -1,
+  onEditMessage,
+  onDeleteMessage
 }: MessageListProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -37,6 +43,37 @@ export const MessageList = ({
   const [isDragging, setIsDragging] = useState(false);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const hasInitialized = useRef(false);
+
+  // 수정 관련 상태
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+
+  const startEditing = (message: Message) => {
+    setEditingId(message.id);
+    setEditValue(message.content);
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditValue("");
+  };
+
+  const saveEdit = (messageId: string) => {
+    if (editValue.trim() && onEditMessage) {
+      onEditMessage(messageId, editValue);
+    }
+    setEditingId(null);
+    setEditValue("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, messageId: string) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      saveEdit(messageId);
+    } else if (e.key === "Escape") {
+      cancelEditing();
+    }
+  };
 
   // 특정 메시지로 스크롤 로직
   useEffect(() => {
@@ -258,9 +295,9 @@ export const MessageList = ({
                     </span>
                   )}
                 </div>
-                <div className={`flex items-end gap-2 max-w-[85%] ${isMyMessage ? "flex-row-reverse" : "flex-row"}`}>
+                <div className={`flex items-end gap-2 max-w-[85%] group ${isMyMessage ? "flex-row-reverse" : "flex-row"}`}>
                   <div
-                    className={`rounded-2xl px-4 py-2 ${
+                    className={`rounded-2xl px-4 py-2 relative ${
                       isMyMessage
                         ? "bg-blue-600 text-white rounded-tr-none"
                         : isBotMessage
@@ -268,7 +305,57 @@ export const MessageList = ({
                         : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100 rounded-tl-none"
                     }`}
                   >
-                    {message.content && <p className="text-sm leading-relaxed">{message.content}</p>}
+                    {editingId === message.id ? (
+                      <div className="flex flex-col gap-2 min-w-[200px]">
+                        <Input
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onKeyDown={(e) => handleKeyDown(e, message.id)}
+                          className="h-8 text-sm bg-blue-700 border-blue-500 text-white placeholder:text-blue-300 focus-visible:ring-blue-400"
+                          autoFocus
+                        />
+                        <div className="flex items-center justify-end gap-1">
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-6 w-6 text-white hover:bg-blue-500"
+                            onClick={cancelEditing}
+                          >
+                            <CloseIcon className="h-3 w-3" />
+                          </Button>
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-6 w-6 text-white hover:bg-blue-500"
+                            onClick={() => saveEdit(message.id)}
+                          >
+                            <Check className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {message.content && <p className="text-sm leading-relaxed">{message.content}</p>}
+                        {isMyMessage && !isSystemMessage && !isBotMessage && (
+                          <div className="absolute -left-16 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => startEditing(message)}
+                              className="p-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-blue-600 transition-colors"
+                              title="수정"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => onDeleteMessage && onDeleteMessage(message.id)}
+                              className="p-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:text-red-600 transition-colors"
+                              title="삭제"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
                     
                     {/* 설문조사 렌더링 */}
                     {message.poll && (

@@ -258,6 +258,103 @@ const ioHandler = (req: NextApiRequest, res: NextApiResponseServerIo) => {
       }
     });
 
+    socket.on("edit-message", async ({ messageId, content, roomId }: { messageId: string, content: string, roomId: string }) => {
+      try {
+        // 링크 프리뷰 재추출 (수정된 내용에 링크가 있을 수 있음)
+        const urls = content.match(URL_REGEX);
+        let previewData = null;
+
+        if (urls && urls.length > 0) {
+          let targetUrl = urls[0];
+          if (!targetUrl.startsWith("http")) targetUrl = `http://${targetUrl}`;
+
+          try {
+            const data: any = await getLinkPreview(targetUrl, { timeout: 3000 });
+            if (data && data.title) {
+              previewData = {
+                title: data.title,
+                description: data.description || "",
+                image: data.images ? data.images[0] : (data.favicons ? data.favicons[0] : ""),
+                url: data.url
+              };
+            }
+          } catch (err) {}
+        }
+
+        const updatedMessage = await db.message.update({
+          where: { id: messageId },
+          data: {
+            content,
+            previewTitle: previewData?.title || null,
+            previewDesc: previewData?.description || null,
+            previewImage: previewData?.image || null,
+            previewUrl: previewData?.url || null,
+          },
+          include: {
+            user: { select: { name: true, imageUrl: true } },
+            attachments: true,
+            poll: {
+              include: {
+                options: {
+                  include: {
+                    votes: { select: { userId: true } },
+                  },
+                },
+              },
+            }
+          }
+        });
+
+        const broadcastMessage: Message = {
+          id: updatedMessage.id,
+          content: updatedMessage.content,
+          senderId: updatedMessage.userId,
+          roomId: updatedMessage.roomId,
+          timestamp: updatedMessage.createdAt.toISOString(),
+          type: "USER",
+          user: updatedMessage.user,
+          attachments: updatedMessage.attachments,
+          poll: updatedMessage.poll ? {
+            id: updatedMessage.poll.id,
+            question: updatedMessage.poll.question,
+            closedAt: updatedMessage.poll.closedAt?.toISOString() || null,
+            options: updatedMessage.poll.options.map((opt) => ({
+              id: opt.id,
+              text: opt.text,
+              votes: opt.votes,
+            })),
+          } : undefined,
+          preview: previewData ? {
+            title: updatedMessage.previewTitle!,
+            description: updatedMessage.previewDesc!,
+            image: updatedMessage.previewImage!,
+            url: updatedMessage.previewUrl!
+          } : (updatedMessage.previewUrl ? {
+            title: updatedMessage.previewTitle!,
+            description: updatedMessage.previewDesc!,
+            image: updatedMessage.previewImage!,
+            url: updatedMessage.previewUrl!
+          } : undefined)
+        };
+
+        io.to(roomId).emit("message-edited", broadcastMessage);
+      } catch (error) {
+        console.error("[SOCKET_IO_EDIT_ERROR]", error);
+      }
+    });
+
+    socket.on("delete-message", async ({ messageId, roomId }: { messageId: string, roomId: string }) => {
+      try {
+        await db.message.delete({
+          where: { id: messageId },
+        });
+
+        io.to(roomId).emit("message-deleted", { messageId });
+      } catch (error) {
+        console.error("[SOCKET_IO_DELETE_ERROR]", error);
+      }
+    });
+
     socket.on("vote", async ({ pollId, optionId, userId }) => {
       try {
         await db.vote.upsert({

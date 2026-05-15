@@ -201,6 +201,17 @@ export const ChatRoom = ({ username, roomId, roomName, creatorId, onLeave }: Cha
       });
     });
 
+    socket.on("message-edited", (message: Message) => {
+      if (message.roomId !== roomId) return;
+      setMessages((prev) => 
+        prev.map((msg) => (msg.id === message.id ? message : msg))
+      );
+    });
+
+    socket.on("message-deleted", ({ messageId }: { messageId: string }) => {
+      setMessages((prev) => prev.filter((msg) => msg.id !== messageId));
+    });
+
     socket.on("user-typing", (data: { roomId: string; username: string }) => {
       if (data.roomId === roomId && data.username !== username) {
         setTypingUsers((prev) => prev.includes(data.username) ? prev : [...prev, data.username]);
@@ -267,6 +278,23 @@ export const ChatRoom = ({ username, roomId, roomName, creatorId, onLeave }: Cha
   const onStopTyping = useCallback(() => {
     if (socket && isConnected) socket.emit("stop-typing", { roomId, username });
   }, [socket, isConnected, roomId, username]);
+
+  const onEditMessage = useCallback(
+    (messageId: string, content: string) => {
+      if (!socket || !isConnected) return;
+      socket.emit("edit-message", { messageId, content, roomId });
+    },
+    [socket, isConnected, roomId]
+  );
+
+  const onDeleteMessage = useCallback(
+    (messageId: string) => {
+      if (!socket || !isConnected) return;
+      if (!window.confirm("정말로 이 메시지를 삭제하시겠습니까?")) return;
+      socket.emit("delete-message", { messageId, roomId });
+    },
+    [socket, isConnected, roomId]
+  );
 
   return (
     <div className="flex flex-col h-full border border-zinc-200 dark:border-zinc-800 rounded-lg bg-white dark:bg-zinc-950 shadow-sm overflow-hidden relative">
@@ -392,6 +420,8 @@ export const ChatRoom = ({ username, roomId, roomName, creatorId, onLeave }: Cha
           onScrollComplete={() => setScrollToId(null)}
           searchResults={searchResults}
           searchIndex={searchIndex}
+          onEditMessage={onEditMessage}
+          onDeleteMessage={onDeleteMessage}
         />
       )}
       
