@@ -130,15 +130,17 @@ export const ChatLobby = ({ onJoinRoom, username, isNameSet, onSetName, onLogout
               <p className="text-xs text-blue-600">반가워요, {username}님!</p>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={onLogout}
-            className="text-zinc-500 hover:text-red-500 transition-colors flex items-center gap-2"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">로그아웃</span>
-          </Button>
+          {view === "list" && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={onLogout}
+              className="text-zinc-500 hover:text-red-500 transition-colors flex items-center gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">로그아웃</span>
+            </Button>
+          )}
         </div>
         <div className="flex gap-2 items-center">
           {view === "list" && (
