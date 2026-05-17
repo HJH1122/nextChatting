@@ -261,7 +261,7 @@ export const ChatLobby = ({ onJoinRoom, username, isNameSet, onSetName, onLogout
                 {isCreating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
                 방 생성 및 입장
               </Button>
-              <Button type="button" variant="ghost" className="w-full" onClick={() => setView("list")}>
+              <Button type="button" variant="secondary" className="w-full bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 border-none" onClick={() => setView("list")}>
                 취소하고 목록으로 돌아가기
               </Button>
             </form>
