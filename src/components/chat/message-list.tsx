@@ -262,11 +262,11 @@ export const MessageList = ({
             {isSystemMessage ? (
               <div 
                 id={`message-${message.id}`}
-                className={`flex justify-center my-2 transition-colors duration-500 ${isHighlighted ? "bg-yellow-100/50 dark:bg-yellow-900/30 rounded-lg" : ""}`}
+                className={`flex justify-center my-3 transition-colors duration-500 ${isHighlighted ? "bg-yellow-100/50 dark:bg-yellow-900/30 rounded-lg" : ""}`}
                 style={isAnchor ? { overflowAnchor: "auto" } : { overflowAnchor: "none" }}
               >
-                <div className="bg-zinc-100 dark:bg-zinc-800/50 rounded-full px-4 py-1">
-                  <p className="text-[11px] text-zinc-500 font-medium">
+                <div className="bg-blue-50/80 dark:bg-blue-900/20 border border-blue-100/50 dark:border-blue-800/30 rounded-full px-5 py-1.5 shadow-sm">
+                  <p className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold tracking-tight">
                     {message.content}
                   </p>
                 </div>
