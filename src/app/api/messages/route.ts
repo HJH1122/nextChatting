@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
       return new NextResponse("Room ID missing", { status: 400 });
     }
 
-    const MESSAGES_BATCH = 15;
+    const MESSAGES_BATCH = 30;
 
     // Prisma 쿼리 공통 옵션
     const queryOptions = {
